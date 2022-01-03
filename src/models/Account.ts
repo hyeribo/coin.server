@@ -4,8 +4,10 @@ import AccountService from '@src/services/AccountService';
 
 type AccountStatusType = 'pending' | 'checking' | 'checked' | 'failed';
 
+const accountService = new AccountService();
+
 export interface AccountModel {
-  status: AccountStatusType;
+  status: AccountStatusType; // 상태
   count: number; // 보유중인 코인 수
   myCoins: MyCoinModel[]; // 내가 보유중인 코인
   buyingCoins: MyCoinModel[]; // 매수 대기중인 코인
@@ -23,15 +25,13 @@ export default class Account implements AccountModel {
 
   /**
    * 초기 세팅
-   * @param accountInfo 계정이 가진 모든 코인
    */
   async init(): Promise<void> {
     try {
       this.setStatus('checking');
-      const myAccountService = new AccountService();
 
       const myAccountInfo: MyCoinModel[] =
-        await myAccountService.getAccountInfo();
+        await accountService.getAccountInfo();
 
       myAccountInfo.forEach((coin) => {
         if (coin.currency === 'KRW') {
@@ -43,7 +43,7 @@ export default class Account implements AccountModel {
         }
       });
 
-      logger.info('Initialized.', {
+      logger.info('Account initialized.', {
         main: 'Account',
         sub: 'init',
         data: this,
@@ -67,7 +67,7 @@ export default class Account implements AccountModel {
   setStatus(status: AccountStatusType) {
     this.status = status;
 
-    logger.verbose('Set status.', {
+    logger.verbose("Set account's status.", {
       main: 'Account',
       sub: 'setStatus',
       data: { status: this.status },

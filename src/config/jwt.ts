@@ -18,7 +18,7 @@ interface payloadModel {
   query_hash_alg?: string;
 }
 
-export const getToken = function (params?: object) {
+export const getToken = function (params?: object): string {
   const payload: payloadModel = {
     access_key: accessKey,
     nonce: uuid(),
@@ -38,7 +38,6 @@ export const getToken = function (params?: object) {
   const jwtToken = jwt.sign(payload, secretKey);
   const authorizationToken = `Bearer ${jwtToken}`;
 
-  logger.info('Token generated.');
-
+  logger.verbose('Token generated.', { data: authorizationToken });
   return authorizationToken;
 };
