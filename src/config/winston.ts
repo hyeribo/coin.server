@@ -53,7 +53,6 @@ if (process.env.NODE_ENV !== 'production') {
   logger.add(
     new winston.transports.Console({
       level: 'verbose', // verbose 레벨까지 출력한다.
-      // json: false, // 로그형태를 json으로도 뽑을 수 있다.
       format: winston.format.combine(
         winston.format.colorize({ all: true }), // 색깔 넣어서 출력
         // winston.format.simple(), // `${info.level}: ${info.message} JSON.stringify({ ...rest })` 포맷으로 출력

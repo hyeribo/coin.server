@@ -38,6 +38,8 @@ export const getToken = function (params?: object): string {
   const jwtToken = jwt.sign(payload, secretKey);
   const authorizationToken = `Bearer ${jwtToken}`;
 
-  logger.verbose('Token generated.', { data: authorizationToken });
+  logger.verbose('Token generated.', {
+    data: { params: params, payload: payload, token: authorizationToken },
+  });
   return authorizationToken;
 };
