@@ -1,9 +1,7 @@
 import { publicAPI } from '@src/config/axios';
 import logger from '@src/config/winston';
 
-// 분 단위 unit
-// export type TradeTickRequestDaysAgoType = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-export type AskBidType = 'ASK' | 'BID'; // ASK: 매도 BID: 매수
+import { OrderSideType } from '@src/types/common';
 
 // 최근 체결 내역 request 모델
 export interface TradeTickRequestModel {
@@ -23,7 +21,7 @@ export interface TradeTickModel {
   trade_volume: number; // 체결량
   prev_closing_price: number; // 전일 종가
   change_price: number; // 변화량
-  ask_bid: AskBidType; // 매도/매수
+  ask_bid: OrderSideType; // 매도/매수
   sequential_id: number; // 체결 번호(Unique)
 }
 

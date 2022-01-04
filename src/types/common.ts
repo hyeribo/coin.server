@@ -17,6 +17,12 @@ export type OrderStateType = 'wait' | 'watch' | 'done' | 'cancel';
 //   cancel = -2,
 // }
 
+// 주문 타입
+// - limit : 지정가 주문
+// - price : 시장가 주문(매수)
+// - market : 시장가 주문(매도)
+export type OrderType = 'limit' | 'price' | 'market';
+
 // 정렬 방식
 // - asc : 오름차순
 // - desc : 내림차순 (default)
