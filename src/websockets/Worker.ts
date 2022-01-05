@@ -3,7 +3,7 @@ import WebSocket from 'ws';
 import { v4 as uuid } from 'uuid';
 import constants from '@src/config/constants';
 
-const { WS_PING_TIME } = constants;
+const { WS_PING_TIME, WS_SNAPSHOT, WS_REALTIME } = constants;
 
 const UPBIT_WS_URL = process.env.UPBIT_WS_URL || '';
 
@@ -73,7 +73,12 @@ export default class Worker implements WorkerModel {
   sendMessage() {
     const params = [
       { ticket: uuid() },
-      { type: 'ticker', codes: [this.coinName], isOnlyRealtime: true },
+      {
+        type: 'ticker',
+        codes: [this.coinName],
+        isOnlySnapshot: WS_SNAPSHOT,
+        isOnlyRealtime: WS_REALTIME,
+      },
     ];
 
     const message = Buffer.from(JSON.stringify(params));

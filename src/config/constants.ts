@@ -1,6 +1,7 @@
 export default {
   WS_PING_TIME: 100_000, // 웹소켓 PING 연결 인터벌
-
+  WS_SNAPSHOT: true,
+  WS_REALTIME: false,
   EXCEPTED_COINS: ['KRW-BTC'],
   // ref: https://docs.upbit.com/docs/market-info-trade-price-detail
   // 호가 (index 이상 - index+1 미만)
