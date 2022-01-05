@@ -1,9 +1,22 @@
 import { privateAPI } from '@src/config/axios';
-
 import logger from '@src/config/winston';
-import { MyCoinModel } from '@src/models/MyCoin';
 
-export interface AccountServiceModel {
+import constant from '@src/config/constants';
+
+const { EXCLUDE_COINS } = constant;
+
+export interface MyCoinModel {
+  currency: string; // 화폐를 의미하는 영문 대문자 코드
+  balance: number; // 주문가능 금액/수량
+  locked: number; // 주문 중 묶여있는 금액/수량
+  avg_buy_price: number; // 매수평균가
+  avg_buy_price_modified: number; // 매수평균가 수정 여부
+  unit_currency: string; // 평단가 기준 화폐
+
+  // last_trade_datetime: string; // 최근 체결 시각
+}
+
+interface AccountServiceModel {
   getAccountInfo: () => Promise<object[]>;
 }
 
@@ -23,10 +36,13 @@ export default class AccountService implements AccountServiceModel {
         avg_buy_price: +obj.avg_buy_price,
         avg_buy_price_modified: obj.avg_buy_price_modified,
         unit_currency: obj.unit_currency,
-        last_trade_datetime: '',
       }));
 
-      return coins;
+      const filteredCoins = coins.filter(
+        (coin: MyCoinModel) => !EXCLUDE_COINS.includes(coin.currency),
+        // (coin: MyCoinModel) => EXCLUDE_COINS.includes(coin.currency),
+      );
+      return filteredCoins;
     } catch (error) {
       logger.error('Network error.', {
         main: 'AccountService',

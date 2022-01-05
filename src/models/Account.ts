@@ -1,10 +1,21 @@
 import logger from '@src/config/winston';
-import { MyCoinModel, MyCoin } from '@src/models/MyCoin';
-import AccountService from '@src/services/AccountService';
+
+import MyCoin from '@src/models/MyCoin';
+
+import AccountService, { MyCoinModel } from '@src/services/AccountService';
+import OrderService from '@src/services/OrderService';
+import TradeService from '@src/services/TradeService';
+
+import constant from '@src/config/constants';
+import errorHandler from '@src/utils/errorHandler';
+
+const { MAX_PROC_COIN_COUNT } = constant;
 
 type AccountStatusType = 'pending' | 'checking' | 'checked' | 'failed';
 
 const accountService = new AccountService();
+const orderService = new OrderService();
+const tradeService = new TradeService();
 
 export interface AccountModel {
   status: AccountStatusType; // 상태
@@ -12,7 +23,10 @@ export interface AccountModel {
   myCoins: MyCoinModel[]; // 내가 보유중인 코인
   buyingCoins: MyCoinModel[]; // 매수 대기중인 코인
   sellingCoins: MyCoinModel[]; // 매도 대기중인 코인
-  orderableWon: number; // 주문 가능 원화
+  currency: {
+    balance: number; // 주문 가능 원화
+    locked: number; // 주문중 묶여있는 원화
+  };
 }
 
 export default class Account implements AccountModel {
@@ -21,7 +35,7 @@ export default class Account implements AccountModel {
   myCoins: MyCoinModel[] = [];
   buyingCoins: MyCoinModel[] = [];
   sellingCoins: MyCoinModel[] = [];
-  orderableWon: number = 0;
+  currency = { balance: 0, locked: 0 };
 
   /**
    * 초기 세팅
@@ -35,27 +49,27 @@ export default class Account implements AccountModel {
 
       myAccountInfo.forEach((coin) => {
         if (coin.currency === 'KRW') {
-          const parsedWon: number = Math.floor(coin.balance);
-          this.setOrderableWon(parsedWon);
+          this.setCurrency(coin);
         } else {
           const myCoin = new MyCoin(coin);
           this.addMyCoin(myCoin);
         }
       });
 
+      // 최대 동작할 코인 수 체크
+      if (this.count > MAX_PROC_COIN_COUNT) {
+        throw new Error('Too many coins to run the server.');
+      }
+
       logger.info('Account initialized.', {
         main: 'Account',
         sub: 'init',
         data: this,
       });
+
       this.setStatus('checked');
     } catch (error) {
-      logger.error('Initialization failed.', {
-        main: 'Account',
-        sub: 'init',
-        data: error,
-      });
-
+      errorHandler(error);
       this.setStatus('failed');
     }
   }
@@ -75,16 +89,16 @@ export default class Account implements AccountModel {
   }
 
   /**
-   * 주문 가능한 원화 세팅
-   * @param value 주문 가능한 원화 액수
+   * 화폐 세팅
+   * @param coin 원화 코인
    */
-  setOrderableWon(value: number) {
-    this.orderableWon = value;
+  setCurrency(coin: MyCoinModel) {
+    this.currency = coin;
 
-    logger.verbose('Set orderableWon.', {
+    logger.verbose('Set currency.', {
       main: 'Account',
-      sub: 'setOrderableWon',
-      data: { orderableWon: this.orderableWon },
+      sub: 'setCurrency',
+      data: { currency: this.currency },
     });
   }
 
@@ -99,7 +113,7 @@ export default class Account implements AccountModel {
     logger.verbose('Added coin.', {
       main: 'Account',
       sub: 'addMyCoin',
-      data: { myCoins: this.myCoins, count: this.count },
+      data: { coin: coin },
     });
   }
 

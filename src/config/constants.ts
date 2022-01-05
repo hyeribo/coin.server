@@ -2,7 +2,10 @@ export default {
   WS_PING_TIME: 100_000, // 웹소켓 PING 연결 인터벌
   WS_SNAPSHOT: true,
   WS_REALTIME: false,
-  EXCEPTED_COINS: ['KRW-BTC'],
+
+  MAX_PROC_COIN_COUNT: 3, // 최대 자동화할 코인 수
+  EXCLUDE_COINS: ['APENFT'], // 프로세스에서 제외할 코인 (없을경우 'NONE'을 넣어준다.)
+
   // ref: https://docs.upbit.com/docs/market-info-trade-price-detail
   // 호가 (index 이상 - index+1 미만)
   PRICE_UNITS: [

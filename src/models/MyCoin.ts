@@ -1,25 +1,14 @@
 import logger from '@src/config/winston';
 
-export interface MyCoinModel {
-  currency: string; // 화폐를 의미하는 영문 대문자 코드
-  balance: number; // 주문가능 금액/수량
-  locked: number; // 주문 중 묶여있는 금액/수량
-  avg_buy_price: number; // 매수평균가
-  avg_buy_price_modified: number; // 매수평균가 수정 여부
-  unit_currency: string; // 평단가 기준 화폐
+import { MyCoinModel } from '@src/services/AccountService';
 
-  last_trade_datetime: string; // 최근 체결 시각
-}
-
-export class MyCoin implements MyCoinModel {
+export default class MyCoin implements MyCoinModel {
   currency = '';
   balance = 0;
   locked = 0;
   avg_buy_price = 0;
   avg_buy_price_modified = 0;
   unit_currency = '';
-
-  last_trade_datetime = '';
 
   constructor(obj: MyCoinModel) {
     this.currency = obj.currency;
@@ -28,7 +17,6 @@ export class MyCoin implements MyCoinModel {
     this.avg_buy_price = obj.avg_buy_price;
     this.avg_buy_price_modified = obj.avg_buy_price_modified;
     this.unit_currency = obj.unit_currency;
-    this.last_trade_datetime = obj.last_trade_datetime;
   }
 
   /**
