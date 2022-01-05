@@ -1,7 +1,13 @@
 import logger from '@src/config/winston';
 
-import { MyCoinModel } from '@src/services/AccountService';
+import WebSocket from '@src/websocket';
+import { MyCoinResponseModel } from '@src/services/AccountService';
+import { MarketCurrencyType } from '@src/types/common';
 
+interface MyCoinModel extends MyCoinResponseModel {
+  marketCurrency: MarketCurrencyType;
+  websocket?: WebSocket;
+}
 export default class MyCoin implements MyCoinModel {
   currency = '';
   balance = 0;
@@ -10,13 +16,23 @@ export default class MyCoin implements MyCoinModel {
   avg_buy_price_modified = 0;
   unit_currency = '';
 
-  constructor(obj: MyCoinModel) {
+  marketCurrency;
+  websocket?: WebSocket;
+
+  constructor(marketCurrency: MarketCurrencyType, obj: MyCoinResponseModel) {
+    this.marketCurrency = marketCurrency;
+
     this.currency = obj.currency;
     this.balance = obj.balance;
     this.locked = obj.locked;
     this.avg_buy_price = obj.avg_buy_price;
     this.avg_buy_price_modified = obj.avg_buy_price_modified;
     this.unit_currency = obj.unit_currency;
+  }
+
+  setWorker() {
+    this.websocket = new WebSocket(this.marketCurrency, this.currency);
+    this.websocket.connect();
   }
 
   /**

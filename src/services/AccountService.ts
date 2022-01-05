@@ -5,15 +5,13 @@ import constant from '@src/config/constants';
 
 const { EXCLUDE_COINS } = constant;
 
-export interface MyCoinModel {
+export interface MyCoinResponseModel {
   currency: string; // 화폐를 의미하는 영문 대문자 코드
   balance: number; // 주문가능 금액/수량
   locked: number; // 주문 중 묶여있는 금액/수량
   avg_buy_price: number; // 매수평균가
   avg_buy_price_modified: number; // 매수평균가 수정 여부
   unit_currency: string; // 평단가 기준 화폐
-
-  // last_trade_datetime: string; // 최근 체결 시각
 }
 
 interface AccountServiceModel {
@@ -25,7 +23,7 @@ export default class AccountService implements AccountServiceModel {
    * 현재 가지고있는 코인 리스트 가져오기
    * @returns
    */
-  async getAccountInfo(): Promise<MyCoinModel[]> {
+  async getAccountInfo(): Promise<MyCoinResponseModel[]> {
     try {
       const res = await privateAPI.get('/accounts');
 
@@ -39,8 +37,7 @@ export default class AccountService implements AccountServiceModel {
       }));
 
       const filteredCoins = coins.filter(
-        (coin: MyCoinModel) => !EXCLUDE_COINS.includes(coin.currency),
-        // (coin: MyCoinModel) => EXCLUDE_COINS.includes(coin.currency),
+        (coin: MyCoinResponseModel) => !EXCLUDE_COINS.includes(coin.currency),
       );
       return filteredCoins;
     } catch (error) {

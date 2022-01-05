@@ -3,8 +3,8 @@ import 'dotenv/config';
 import http from 'http';
 
 import logger from '@src/config/winston';
-import Account from '@src/models/Account';
-import Market from '@src/models/Market';
+import Worker from '@src/worker';
+import errorHandler from '@src/utils/errorHandler';
 
 const hostname = '127.0.0.1';
 const port = 3000;
@@ -16,11 +16,12 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(port, hostname, async () => {
-  logger.info(`Server running at http://${hostname}:${port}/`);
+  try {
+    logger.info(`Server running at http://${hostname}:${port}/`);
 
-  const myAccount = new Account();
-  await myAccount.init();
-
-  const kMarket = new Market('KRW'); // 원화마켓
-  await kMarket.init();
+    const worker = new Worker('KRW'); // 원화마켓 워커 생성
+    worker.start();
+  } catch (error) {
+    errorHandler(error, { main: 'App' });
+  }
 });
