@@ -3,11 +3,6 @@ import logger from '@src/config/winston';
 
 export type TickerChangeType = 'EVEN' | 'RISE' | 'FALL'; // EVEN: 보합 / RISE: 상승 / FALL: 하락
 
-// 현재가 request 모델
-export interface TickerRequestModel {
-  markets: string; // 종목코드 목록 (ex. KRW-BTC,BTC-ETH)
-}
-
 // 현재가 response 모델
 export interface TickerModel {
   market: string; // 종목코드
@@ -38,19 +33,19 @@ export interface TickerModel {
 }
 
 export interface TickerServiceModel {
-  getTickers: (data: TickerRequestModel) => Promise<TickerModel[]>;
+  getTickers: (markets: string) => Promise<TickerModel[]>;
 }
 
 export default class TickerService implements TickerServiceModel {
   /**
    * 현재가 조회
-   * @param data
+   * @param markets 종목코드 목록 (ex. KRW-BTC,BTC-ETH)
    * @returns 현재가
    */
-  async getTickers(data: TickerRequestModel): Promise<TickerModel[]> {
+  async getTickers(markets: string): Promise<TickerModel[]> {
     try {
       const res = await publicAPI.get('/ticker', {
-        params: data,
+        params: { markets },
       });
 
       return res.data || [];

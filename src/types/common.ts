@@ -1,3 +1,11 @@
+// 마켓 화폐 코드
+export type MarketCurrencyType = 'KRW' | 'BTC';
+
+// 종목 투자유의 유무
+// - NONE : 해당 사항 없음
+// - CAUTION : 투자유의
+export type MarketWarningType = 'NONE' | 'CAUTION';
+
 // 주문 종류
 // - ASK : 매도
 // - BID : 매수

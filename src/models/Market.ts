@@ -1,11 +1,10 @@
 import logger from '@src/config/winston';
 import MarketService from '@src/services/MarketService';
+import { MarketCurrencyType, MarketWarningType } from '@src/types/common';
 
 const marketService = new MarketService();
 
-export type MarketStatusType = 'loading' | 'loaded' | 'failed';
-export type MarketCurrencyType = 'KRW' | 'BTC'; // 마켓 코드
-export type MarketWarningType = 'NONE' | 'CAUTION'; // NONE (해당 사항 없음), CAUTION(투자유의)
+type MarketStatusType = 'loading' | 'loaded' | 'failed';
 
 export interface MarketCoinModel {
   market: string; // 업비트에서 제공중인 시장 정보
@@ -14,7 +13,7 @@ export interface MarketCoinModel {
   market_warning: MarketWarningType; // 유의 종목 여부
 }
 
-export interface MarketModel {
+interface MarketModel {
   status: MarketStatusType; // 상태
   code: MarketCurrencyType; // 마켓 코드 (KRW: 원화마켓, BTC: 비트코인마켓)
   coins: MarketCoinModel[]; // 마켓별 코인 전체 리스트
@@ -50,6 +49,11 @@ export default class Market implements MarketModel {
         main: 'Market',
         sub: 'init',
         data: { count: this.coins.length },
+      });
+      logger.verbose(`${this.code} market's coins.`, {
+        main: 'Market',
+        sub: 'init',
+        data: { coins: this.coins },
       });
       this.setStatus('loaded');
     } catch (error) {

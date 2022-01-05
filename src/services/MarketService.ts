@@ -1,6 +1,7 @@
 import { publicAPI } from '@src/config/axios';
 import logger from '@src/config/winston';
-import { MarketCurrencyType, MarketCoinModel } from '@src/models/Market';
+import { MarketCurrencyType } from '@src/types/common';
+import { MarketCoinModel } from '@src/models/Market';
 
 export interface MarketServiceModel {
   getAllCoins: (marketCode: MarketCurrencyType) => Promise<MarketCoinModel[]>;
