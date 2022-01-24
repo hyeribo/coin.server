@@ -1,15 +1,22 @@
 import logger from '@src/config/winston';
 import WebSocketClient from 'ws';
 import { v4 as uuid } from 'uuid';
+import _ from 'lodash';
 
+import MarketService, {
+  MarketCoinResponseModel,
+} from '@src/services/MarketService';
 import { MarketCurrencyType } from '@src/types/common';
 import constants from '@src/config/constants';
 
-const { WS_PING_TIME, WS_SNAPSHOT, WS_REALTIME } = constants;
+const marketService = new MarketService();
+
+const { WS_PING_TIME, WS_SNAPSHOT, WS_REALTIME, WS_CONN_LIMIT_PER_SEC } =
+  constants;
 
 const UPBIT_WS_URL = process.env.UPBIT_WS_URL || '';
 
-export interface TickerResponseModel {
+interface TickerResponseModel {
   ty: string; // 타입 (ticker)
   cd: string; // 종목코드 (ex. KRW-BTC)
   op: number; // 시가
@@ -37,7 +44,9 @@ export interface TickerResponseModel {
   h52wdt: string; // 52주 최고가 달성일 (yyyy-MM-dd)
   l52wp: number; // 52주 최저가
   l52wdt: string; // 52주 최저가 달성일 (yyyy-MM-dd)
+  ts: string; // 거래상태 *deprecated
   ms: 'PREVIEW' | 'ACTIVE' | 'DELISTED'; // 거래상태 (PREVIEW : 입금지원, ACTIVE : 거래지원가능, DELISTED : 거래지원종료)
+  msfi: string; // 거래 상태 *deprecated
   its: boolean; // 거래 정지 여부
   dd: Date; // 상장폐지일
   mw: 'NONE' | 'CAUTION'; // 유의 종목 여부 (NONE : 해당없음, CAUTION : 투자유의)
@@ -62,44 +71,93 @@ interface SendMessageModel {
   };
 }
 
-interface WebSocketModel {
-  isAlive: boolean;
-  marketCurrency: MarketCurrencyType;
-  currency: string;
-  socket: WebSocketClient;
-  pingInterval?: ReturnType<typeof setInterval>;
+interface MarketWatcherModel {
+  // status: 'loading' | 'loaded';
+  // isAlive: boolean;
+  // socket: WebSocketClient;
+  // pingInterval?: ReturnType<typeof setInterval>;
+  // marketCurrency: MarketCurrencyType;
+  // allCoinSnapshots: TickerResponseModel[];
+  allCoinCodes: string[];
+  allCoinCount: number;
 
-  connect: () => void;
-  sendMessage: () => void;
+  init: () => void;
+  setAllCoins: () => void;
+  // connect: () => void;
+  // sendMessage: () => void;
   handleMessage: (data: Buffer) => object;
   heartbeat: () => void;
   destroy: () => void;
 }
 
-export default class WebSocket implements WebSocketModel {
-  isAlive: boolean = false;
-  marketCurrency;
-  currency = '';
-  socket!: WebSocketClient;
-  pingInterval?: ReturnType<typeof setInterval>;
+export default class MarketWatcher implements MarketWatcherModel {
+  private status: 'loading' | 'loaded' = 'loading';
+  private isAlive = false;
+  private socket!: WebSocketClient;
+  private pingInterval?: ReturnType<typeof setInterval>;
+  private marketCurrency: MarketCurrencyType;
+  private allCoinSnapshots: TickerResponseModel[] = []; // 모든 코인의 스냅샷
+  allCoinCodes: string[] = []; // 모든 코인 코드
+  allCoinCount = 0; // 모든 코인 개수
 
-  constructor(marketCurrency: MarketCurrencyType, currency: string) {
-    if (!marketCurrency) {
-      throw new Error('marketCurrency not provided.');
-    }
-    if (!currency) {
-      throw new Error('currency not provided.');
-    }
+  constructor(marketCurrency: MarketCurrencyType) {
     this.marketCurrency = marketCurrency;
-    this.currency = currency;
   }
 
-  connect = () => {
+  /**
+   * 초기화
+   */
+  init = async () => {
+    await this.setAllCoins();
+    this.connect();
+  };
+
+  /**
+   * 모든 코인 & 코인 코드 세팅
+   */
+  async setAllCoins() {
+    try {
+      const allCoins: MarketCoinResponseModel[] =
+        await marketService.getAllCoins(this.marketCurrency);
+      if (!allCoins || !allCoins.length) {
+        throw new Error('allCoins are empty.');
+      }
+
+      const allCoinCodes = allCoins.map((coin) => coin.market);
+      this.allCoinCodes = allCoinCodes;
+      this.allCoinCount = allCoinCodes.length;
+
+      logger.info('Set all coins info', {
+        main: 'MarketWatcher',
+        data: { allCoinCount: this.allCoinCount },
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * 스냅샷 추가하기
+   * @param snapshot
+   */
+  addSnapshot = (snapshot: TickerResponseModel) => {
+    this.allCoinSnapshots.push(snapshot);
+
+    if (this.allCoinSnapshots.length === this.allCoinCount) {
+      this.status = 'loaded';
+      logger.verbose('All coin snapshots are added.', {
+        main: 'MarketWatcher',
+        data: { allCoinSnapshots: this.allCoinSnapshots },
+      });
+    }
+  };
+
+  private connect() {
     this.socket = new WebSocketClient(UPBIT_WS_URL);
     this.socket.on('open', () => {
       logger.info('Connection opened.', {
-        main: 'WebSocket',
-        data: { currency: this.currency },
+        main: 'MarketWatcher',
+        data: { marketCurrency: this.marketCurrency },
       });
 
       this.heartbeat();
@@ -107,7 +165,8 @@ export default class WebSocket implements WebSocketModel {
         this.heartbeat();
       }, WS_PING_TIME);
 
-      this.sendMessage();
+      // this.sendMessage();
+      this.getAllCoinSnapshots(this.allCoinCodes);
     });
 
     this.socket.on('message', this.handleMessage);
@@ -115,27 +174,44 @@ export default class WebSocket implements WebSocketModel {
     this.socket.on('close', () => {
       console.log('Connection closed.');
     });
-  };
+  }
 
-  /**
-   * The WebSocket protocol only works with text and binary data.
-   */
-  sendMessage = () => {
+  getAllCoinSnapshots(coinCodes: string[]) {
+    console.log('coinCodes =====>>> ', coinCodes);
     const params = [
       { ticket: uuid() },
       {
         type: 'ticker',
-        codes: [`${this.marketCurrency}-${this.currency}`],
-        isOnlySnapshot: WS_SNAPSHOT,
-        isOnlyRealtime: WS_REALTIME,
+        codes: coinCodes,
+        isOnlySnapshot: true,
       },
       { format: 'SIMPLE' },
     ];
 
     const message = Buffer.from(JSON.stringify(params));
     this.socket.send(message);
-    logger.verbose('send :', { main: 'WebSocket', data: params });
-  };
+    logger.verbose('send :', { main: 'MarketWatcher', data: params });
+  }
+
+  /**
+   * The WebSocket protocol only works with text and binary data.
+   */
+  // sendMessage() {
+  //   const params = [
+  //     { ticket: uuid() },
+  //     {
+  //       type: 'ticker',
+  //       codes: [`${this.marketCurrency}-123`],
+  //       isOnlySnapshot: WS_SNAPSHOT,
+  //       isOnlyRealtime: WS_REALTIME,
+  //     },
+  //     { format: 'SIMPLE' },
+  //   ];
+
+  //   const message = Buffer.from(JSON.stringify(params));
+  //   this.socket.send(message);
+  //   logger.verbose('send :', { main: 'WebSocket', data: params });
+  // }
 
   /**
    * The WebSocket protocol only works with text and binary data.
@@ -143,10 +219,15 @@ export default class WebSocket implements WebSocketModel {
    */
   handleMessage = (data: Buffer) => {
     const message = JSON.parse(data.toString());
-    logger.verbose('received :', {
-      main: 'WebSocket',
-      data: message,
-    });
+
+    if (message.ty === 'ticker') {
+      this.addSnapshot(message);
+    } else {
+      logger.verbose('received :', {
+        main: 'WebSocket',
+        data: message,
+      });
+    }
     return message;
   };
 
@@ -155,18 +236,18 @@ export default class WebSocket implements WebSocketModel {
    * Idle Timeout으로 WebSocket Connection을 종료한다.
    * 이를 방지하기 위해 100초마다 PING 메시지를 보내서 Connection을 유지한다.
    */
-  heartbeat = () => {
+  heartbeat() {
     logger.verbose('heartbeat.', { main: 'WebSocket' });
     this.isAlive = true;
     this.socket.send('PING');
-  };
+  }
 
   /**
    * Socket 인스턴스 삭제 전
    * 소켓 커넥션 연결 해제,
    * 인터벌 제거
    */
-  destroy = () => {
+  destroy() {
     this.isAlive = false;
 
     if (this.pingInterval) {
@@ -174,5 +255,5 @@ export default class WebSocket implements WebSocketModel {
     }
 
     this.socket.terminate();
-  };
+  }
 }

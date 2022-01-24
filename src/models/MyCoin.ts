@@ -4,20 +4,23 @@ import WebSocket from '@src/websocket';
 import { MyCoinResponseModel } from '@src/services/AccountService';
 import { MarketCurrencyType } from '@src/types/common';
 
-interface MyCoinModel extends MyCoinResponseModel {
+export interface MyCoinModel {
   marketCurrency: MarketCurrencyType;
   websocket?: WebSocket;
+  setData(data: MyCoinResponseModel): void;
+  getData(): MyCoinResponseModel;
+  setWebsocket(): void;
 }
 export default class MyCoin implements MyCoinModel {
-  currency = '';
-  balance = 0;
-  locked = 0;
-  avg_buy_price = 0;
-  avg_buy_price_modified = 0;
-  unit_currency = '';
-
   marketCurrency;
   websocket?: WebSocket;
+
+  private currency = '';
+  private balance = 0;
+  private locked = 0;
+  private avg_buy_price = 0;
+  private avg_buy_price_modified = false;
+  private unit_currency = '';
 
   constructor(marketCurrency: MarketCurrencyType, obj: MyCoinResponseModel) {
     this.marketCurrency = marketCurrency;
@@ -30,7 +33,40 @@ export default class MyCoin implements MyCoinModel {
     this.unit_currency = obj.unit_currency;
   }
 
-  setWorker() {
+  setData(data: MyCoinResponseModel) {
+    if (data.currency) {
+      this.currency = data.currency;
+    }
+    if (data.balance) {
+      this.balance = data.balance;
+    }
+    if (data.locked) {
+      this.locked = data.locked;
+    }
+    if (data.avg_buy_price) {
+      this.avg_buy_price = data.avg_buy_price;
+    }
+    if (data.avg_buy_price_modified) {
+      this.avg_buy_price_modified = data.avg_buy_price_modified;
+    }
+    if (data.unit_currency) {
+      this.unit_currency = data.unit_currency;
+    }
+  }
+
+  getData() {
+    return {
+      currency: this.currency,
+      balance: this.balance,
+      locked: this.locked,
+      avg_buy_price: this.avg_buy_price,
+      avg_buy_price_modified: this.avg_buy_price_modified,
+      unit_currency: this.unit_currency,
+      marketCurrency: this.marketCurrency,
+    };
+  }
+
+  setWebsocket() {
     this.websocket = new WebSocket(this.marketCurrency, this.currency);
     this.websocket.connect();
   }

@@ -2,6 +2,7 @@ import logger from '@src/config/winston';
 
 import Account from '@src/models/Account';
 import WebSocket from '@src/websocket';
+import MarketWatcher from '@src/websocket/MarketWatcher';
 
 import constant from '@src/config/constants';
 import errorHandler from '@src/utils/errorHandler';
@@ -9,9 +10,10 @@ import errorHandler from '@src/utils/errorHandler';
 import { MarketCurrencyType } from '@src/types/common';
 
 export default class Worker {
-  marketCurrency: MarketCurrencyType; // 단위 화폐
-  account!: Account;
   private status: 'start' | 'stop' = 'start';
+  marketCurrency: MarketCurrencyType; // 단위 화폐
+  account!: Account; // 계정 인스턴스
+  marketWatcher!: MarketWatcher;
 
   constructor(marketCurrency: MarketCurrencyType) {
     if (!marketCurrency) {
@@ -26,14 +28,15 @@ export default class Worker {
       this.account = new Account(this.marketCurrency);
       await this.account.init();
 
-      // 계정이 가진 금액이 거래 가능한 금액 이상인지 확인
-      const checkTradable = this.account.checkTradable();
-      if (!checkTradable) {
-        throw new Error('Not enough balance to trade.');
-      }
+      // 거래 가능한 계정인지 확인
+      this.account.checkTradable();
 
       // 계정이 가진 코인들에 각각 웹소켓 연결
-      this.connectWebSocketToAllCoins();
+      // this.connectWebSocketToAllCoins();
+
+      // 시장 감시자 생성
+      // this.marketWatcher = new MarketWatcher(this.marketCurrency);
+      // await this.marketWatcher.init();
     } catch (error) {
       errorHandler(error, { main: 'Worker', sub: 'init' });
       this.stop();
@@ -48,11 +51,16 @@ export default class Worker {
     });
   }
 
+  /**
+   * 내가 가진 코인들을 각각 웹소켓에 연결
+   */
   connectWebSocketToAllCoins() {
+    // 내가 가진 모든 코인들 가져오기
     const allCoins = this.account.getCoins();
     console.log('allCoins', allCoins);
+    // 웹소켓 연결
     allCoins.forEach((coin) => {
-      coin.setWorker();
+      coin.setWebsocket();
     });
   }
 }
