@@ -116,6 +116,7 @@ export default class WebSocket implements WebSocketModel {
     this.socket.on('message', this.handleMessage);
 
     this.socket.on('close', () => {
+      this.isAlive = false;
       logger.info('Connection closed.', {
         main: 'WebSocket',
         data: { symbol: this.symbol },
