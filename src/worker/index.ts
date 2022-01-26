@@ -56,7 +56,7 @@ export default class Worker {
     console.log('allCoins', allCoins);
     // 웹소켓 연결
     allCoins.forEach((coin) => {
-      coin.setWebsocket();
+      coin.connect();
     });
   }
 }

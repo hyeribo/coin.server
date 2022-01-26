@@ -35,3 +35,9 @@ export type OrderType = 'limit' | 'price' | 'market';
 // - asc : 오름차순
 // - desc : 내림차순 (default)
 export type DataOrderByType = 'asc' | 'desc';
+
+// websocket 요청/응답 타입
+// - ticker : 현재가
+// - trade : 체결
+// - orderbook : 호가
+export type TickerType = 'ticker' | 'trade' | 'orderbook';

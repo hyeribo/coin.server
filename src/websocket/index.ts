@@ -2,7 +2,8 @@ import logger from '@src/config/winston';
 import WebSocketClient from 'ws';
 import { v4 as uuid } from 'uuid';
 
-import { MarketCurrencyType } from '@src/types/common';
+import { TickerType, MarketCurrencyType } from '@src/types/common';
+import { MyCoinResponseModel } from '@src/services/AccountService';
 import config from '@src/config';
 
 const { WS_PING_TIME, WS_SNAPSHOT, WS_REALTIME } = config;
@@ -62,16 +63,15 @@ interface SendMessageModel {
   };
 }
 
-interface WebSocketModel {
+// TODO: 필수적인 interface인가?
+interface WebSocketModel extends MyCoinResponseModel {
   isAlive: boolean;
-  marketCurrency: MarketCurrencyType;
-  symbol: string;
   mSymbol: string; // 단위화폐-심볼 형식의 코드
   socket: WebSocketClient;
   pingInterval?: ReturnType<typeof setInterval>;
 
   connect: () => void;
-  sendMessage: () => void;
+  sendMessage: (type: TickerType) => void;
   handleMessage: (data: Buffer) => object;
   heartbeat: () => void;
   destroy: () => void;
@@ -79,30 +79,46 @@ interface WebSocketModel {
 
 export default class WebSocket implements WebSocketModel {
   isAlive: boolean = false;
-  marketCurrency;
+
   symbol;
+  balance;
+  locked;
+  avgBuyPrice;
+  avgBuyPriceModified;
+  marketCurrency;
+
   mSymbol;
   socket!: WebSocketClient;
   pingInterval?: ReturnType<typeof setInterval>;
 
-  constructor(marketCurrency: MarketCurrencyType, symbol: string) {
-    if (!marketCurrency) {
+  constructor(coinData: MyCoinResponseModel) {
+    if (!coinData.marketCurrency) {
       throw new Error('marketCurrency not provided.');
     }
-    if (!symbol) {
+    if (!coinData.symbol) {
       throw new Error('currency not provided.');
     }
-    this.marketCurrency = marketCurrency;
-    this.symbol = symbol;
-    this.mSymbol = `${this.marketCurrency}-${this.symbol}`;
+
+    this.symbol = coinData.symbol;
+    this.balance = coinData.balance;
+    this.locked = coinData.locked;
+    this.avgBuyPrice = coinData.avgBuyPrice;
+    this.avgBuyPriceModified = coinData.avgBuyPriceModified;
+    this.marketCurrency = coinData.marketCurrency;
+
+    this.mSymbol = `${coinData.marketCurrency}-${coinData.symbol}`;
   }
 
   connect = () => {
     this.socket = new WebSocketClient(UPBIT_WS_URL);
+
+    // 소켓 연결
     this.socket.on('open', () => {
+      this.isAlive = true;
+
       logger.info('Connection opened.', {
         main: 'WebSocket',
-        data: { symbol: this.symbol },
+        data: { mSymbol: this.mSymbol },
       });
 
       this.heartbeat();
@@ -110,11 +126,18 @@ export default class WebSocket implements WebSocketModel {
         this.heartbeat();
       }, WS_PING_TIME);
 
-      this.sendMessage();
+      // 실시간 현재가 정보 요청
+      this.sendMessage('ticker');
+      // 실시간 체결 정보 요청
+      this.sendMessage('trade');
+      // 실시간 호가 정보 요청
+      this.sendMessage('orderbook');
     });
 
+    // 소켓 메세지 수신
     this.socket.on('message', this.handleMessage);
 
+    // 소켓 연결 해제
     this.socket.on('close', () => {
       this.isAlive = false;
       logger.info('Connection closed.', {
@@ -127,14 +150,14 @@ export default class WebSocket implements WebSocketModel {
   /**
    * The WebSocket protocol only works with text and binary data.
    */
-  sendMessage = () => {
+  sendMessage = (type: TickerType) => {
     const params = [
       { ticket: uuid() },
       {
-        type: 'ticker',
+        type: type,
         codes: [this.mSymbol],
-        isOnlySnapshot: WS_SNAPSHOT,
-        isOnlyRealtime: WS_REALTIME,
+        isOnlySnapshot: false,
+        isOnlyRealtime: true,
       },
       { format: 'SIMPLE' },
     ];
@@ -150,10 +173,13 @@ export default class WebSocket implements WebSocketModel {
    */
   handleMessage = (data: Buffer) => {
     const message = JSON.parse(data.toString());
-    logger.verbose('received :', {
-      main: 'WebSocket',
-      data: message,
-    });
+    if (message.ty === 'ticker') {
+      this.handleTickerMessage(message);
+    } else if (message.ty === 'trade') {
+      this.handleTradeMessage(message);
+    } else if (message.ty === 'orderbook') {
+      this.handleOrderbookMessage(message);
+    }
     return message;
   };
 
@@ -164,7 +190,6 @@ export default class WebSocket implements WebSocketModel {
    */
   heartbeat = () => {
     logger.verbose('heartbeat.', { main: 'WebSocket' });
-    this.isAlive = true;
     this.socket.send('PING');
   };
 
@@ -181,5 +206,40 @@ export default class WebSocket implements WebSocketModel {
     }
 
     this.socket.terminate();
+  };
+
+  // ********** message handler **********
+
+  /**
+   * 현재가 메세지 수신시
+   * @param message
+   */
+  handleTickerMessage = (message: TickerResponseModel) => {
+    logger.verbose('Ticker received :', {
+      main: 'WebSocket',
+      data: message,
+    });
+  };
+
+  /**
+   * 체결 메세지 수신시
+   * @param message
+   */
+  handleTradeMessage = (message: TickerResponseModel) => {
+    logger.verbose('Trade received :', {
+      main: 'WebSocket',
+      data: message,
+    });
+  };
+
+  /**
+   * 호가 메세지 수신시
+   * @param message
+   */
+  handleOrderbookMessage = (message: TickerResponseModel) => {
+    logger.verbose('Orderbook received :', {
+      main: 'WebSocket',
+      data: message,
+    });
   };
 }

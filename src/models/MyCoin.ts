@@ -5,36 +5,12 @@ import { MyCoinResponseModel } from '@src/services/AccountService';
 import { MarketCurrencyType } from '@src/types/common';
 
 export interface MyCoinModel {
-  websocket?: WebSocket;
-  setWebsocket(): void;
   setData(data: MyCoinResponseModel): void;
   getData(): MyCoinResponseModel;
 }
-export default class MyCoin implements MyCoinModel {
-  websocket?: WebSocket; // 웹소켓 객체
-
-  private symbol;
-  private balance;
-  private locked;
-  private avgBuyPrice;
-  private avgBuyPriceModified;
-  private marketCurrency;
-
-  constructor(obj: MyCoinResponseModel) {
-    this.symbol = obj.symbol;
-    this.balance = obj.balance;
-    this.locked = obj.locked;
-    this.avgBuyPrice = obj.avgBuyPrice;
-    this.avgBuyPriceModified = obj.avgBuyPriceModified;
-    this.marketCurrency = obj.marketCurrency;
-  }
-
-  /**
-   * 웹소켓 연결하기
-   */
-  setWebsocket() {
-    this.websocket = new WebSocket(this.marketCurrency, this.symbol);
-    this.websocket.connect();
+export default class MyCoin extends WebSocket implements MyCoinModel {
+  constructor(coinData: MyCoinResponseModel) {
+    super(coinData);
   }
 
   /**
