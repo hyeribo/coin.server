@@ -1,17 +1,18 @@
 import { privateAPI } from '@src/config/axios';
 import logger from '@src/config/winston';
 
-import constant from '@src/config/constants';
+import { MarketCurrencyType } from '@src/types/common';
+import config from '@src/config';
 
-const { EXCLUDE_COINS } = constant;
+const { EXCLUDE_COINS } = config;
 
 export interface MyCoinResponseModel {
-  currency: string; // 화폐를 의미하는 영문 대문자 코드
+  symbol: string; // 화폐를 의미하는 영문 대문자 코드
   balance: number; // 주문가능 금액/수량
   locked: number; // 주문 중 묶여있는 금액/수량
-  avg_buy_price: number; // 매수평균가
-  avg_buy_price_modified: boolean; // 매수평균가 수정 여부
-  unit_currency: string; // 평단가 기준 화폐
+  avgBuyPrice: number; // 매수평균가
+  avgBuyPriceModified: boolean; // 매수평균가 수정 여부
+  marketCurrency: MarketCurrencyType; // 평단가 기준 화폐
 }
 
 interface AccountServiceModel {
@@ -27,19 +28,19 @@ export default class AccountService implements AccountServiceModel {
     try {
       const res = await privateAPI.get('/accounts');
 
-      const coins = (res.data || []).map((obj: any) => ({
-        currency: obj.currency,
+      let coins = (res.data || []).map((obj: any) => ({
+        symbol: obj.currency,
         balance: +obj.balance,
         locked: +obj.locked,
-        avg_buy_price: +obj.avg_buy_price,
-        avg_buy_price_modified: obj.avg_buy_price_modified,
-        unit_currency: obj.unit_currency,
+        avgBuyPrice: +obj.avg_buy_price,
+        avgBuyPriceModified: obj.avg_buy_price_modified,
+        marketCurrency: obj.unit_currency,
       }));
 
-      const filteredCoins = coins.filter(
-        (coin: MyCoinResponseModel) => !EXCLUDE_COINS.includes(coin.currency),
+      coins = coins.filter(
+        (coin: MyCoinResponseModel) => !EXCLUDE_COINS.includes(coin.symbol),
       );
-      return filteredCoins;
+      return coins;
     } catch (error) {
       logger.error('Network error.', {
         main: 'AccountService',

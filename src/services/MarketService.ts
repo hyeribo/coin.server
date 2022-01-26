@@ -6,7 +6,7 @@ export interface MarketCoinResponseModel {
   market: string; // 업비트에서 제공중인 시장 정보
   korean_name: string; // 거래 대상 암호화폐 한글명
   english_name: string; // 거래 대상 암호화폐 영문명
-  market_warning: MarketWarningType; // 유의 종목 여부
+  market_warning: MarketWarningType; // 유의 종목 여부(NONE:해당사항없음, CAUTION:투자유의)
 }
 
 export interface MarketServiceModel {
@@ -29,10 +29,16 @@ export default class MarketService implements MarketServiceModel {
         params: { isDetails: true },
       });
 
-      let coins = res.data || [];
+      let coins = (res.data || []).map((obj: any) => ({
+        mSymbol: obj.market,
+        koreanName: obj.korean_name,
+        englishName: obj.english_name,
+        marketWarning: obj.market_warning,
+      }));
+
       if (marketCurrency) {
         coins = coins.filter((coin: any) =>
-          coin.market.startsWith(marketCurrency),
+          coin.mSymbol.startsWith(marketCurrency),
         );
       }
 

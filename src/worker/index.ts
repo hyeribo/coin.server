@@ -4,7 +4,6 @@ import Account from '@src/models/Account';
 import WebSocket from '@src/websocket';
 import MarketWatcher from '@src/websocket/MarketWatcher';
 
-import constant from '@src/config/constants';
 import errorHandler from '@src/utils/errorHandler';
 
 import { MarketCurrencyType } from '@src/types/common';
@@ -28,11 +27,8 @@ export default class Worker {
       this.account = new Account(this.marketCurrency);
       await this.account.init();
 
-      // 거래 가능한 계정인지 확인
-      this.account.checkTradable();
-
       // 계정이 가진 코인들에 각각 웹소켓 연결
-      // this.connectWebSocketToAllCoins();
+      // this.connectWebSocketToMyCoins();
 
       // 시장 감시자 생성
       // this.marketWatcher = new MarketWatcher(this.marketCurrency);
@@ -54,7 +50,7 @@ export default class Worker {
   /**
    * 내가 가진 코인들을 각각 웹소켓에 연결
    */
-  connectWebSocketToAllCoins() {
+  connectWebSocketToMyCoins() {
     // 내가 가진 모든 코인들 가져오기
     const allCoins = this.account.getCoins();
     console.log('allCoins', allCoins);

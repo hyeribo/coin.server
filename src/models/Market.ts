@@ -10,18 +10,18 @@ type MarketStatusType = 'loading' | 'loaded' | 'failed';
 
 interface MarketModel {
   status: MarketStatusType; // 상태
-  code: MarketCurrencyType; // 마켓 코드 (KRW: 원화마켓, BTC: 비트코인마켓)
+  symbol: MarketCurrencyType; // 마켓 코드 (KRW: 원화마켓, BTC: 비트코인마켓)
   coins: MarketCoinResponseModel[]; // 마켓별 코인 전체 리스트
 }
 
 export default class Market implements MarketModel {
   status: MarketStatusType = 'loading';
-  code: MarketCurrencyType = 'KRW';
+  symbol: MarketCurrencyType = 'KRW';
   coins: MarketCoinResponseModel[] = [];
 
-  constructor(code?: MarketCurrencyType) {
-    if (code) {
-      this.code = code;
+  constructor(symbol?: MarketCurrencyType) {
+    if (symbol) {
+      this.symbol = symbol;
     }
   }
 
@@ -33,26 +33,26 @@ export default class Market implements MarketModel {
       this.setStatus('loading');
 
       const coins: MarketCoinResponseModel[] = await marketService.getAllCoins(
-        this.code,
+        this.symbol,
       );
 
       // 투자유의종목이 아닌 코인들만 필터처리
       const safeCoins = coins.filter((coin) => coin.market_warning === 'NONE');
       this.coins = safeCoins;
 
-      logger.info(`${this.code} market initialized.`, {
+      logger.info(`${this.symbol} market initialized.`, {
         main: 'Market',
         sub: 'init',
         data: { count: this.coins.length },
       });
-      logger.verbose(`${this.code} market's coins.`, {
+      logger.verbose(`${this.symbol} market's coins.`, {
         main: 'Market',
         sub: 'init',
         data: { coins: this.coins },
       });
       this.setStatus('loaded');
     } catch (error) {
-      logger.error(`${this.code} market initialization failed.`, {
+      logger.error(`${this.symbol} market initialization failed.`, {
         main: 'Market',
         sub: 'init',
         data: error,

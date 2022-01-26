@@ -5,37 +5,45 @@ import { MyCoinResponseModel } from '@src/services/AccountService';
 import { MarketCurrencyType } from '@src/types/common';
 
 export interface MyCoinModel {
-  marketCurrency: MarketCurrencyType;
   websocket?: WebSocket;
+  setWebsocket(): void;
   setData(data: MyCoinResponseModel): void;
   getData(): MyCoinResponseModel;
-  setWebsocket(): void;
 }
 export default class MyCoin implements MyCoinModel {
-  marketCurrency;
-  websocket?: WebSocket;
+  websocket?: WebSocket; // 웹소켓 객체
 
-  private currency = '';
-  private balance = 0;
-  private locked = 0;
-  private avg_buy_price = 0;
-  private avg_buy_price_modified = false;
-  private unit_currency = '';
+  private symbol;
+  private balance;
+  private locked;
+  private avgBuyPrice;
+  private avgBuyPriceModified;
+  private marketCurrency;
 
-  constructor(marketCurrency: MarketCurrencyType, obj: MyCoinResponseModel) {
-    this.marketCurrency = marketCurrency;
-
-    this.currency = obj.currency;
+  constructor(obj: MyCoinResponseModel) {
+    this.symbol = obj.symbol;
     this.balance = obj.balance;
     this.locked = obj.locked;
-    this.avg_buy_price = obj.avg_buy_price;
-    this.avg_buy_price_modified = obj.avg_buy_price_modified;
-    this.unit_currency = obj.unit_currency;
+    this.avgBuyPrice = obj.avgBuyPrice;
+    this.avgBuyPriceModified = obj.avgBuyPriceModified;
+    this.marketCurrency = obj.marketCurrency;
   }
 
+  /**
+   * 웹소켓 연결하기
+   */
+  setWebsocket() {
+    this.websocket = new WebSocket(this.marketCurrency, this.symbol);
+    this.websocket.connect();
+  }
+
+  /**
+   * 데이터 세팅하기
+   * @param data
+   */
   setData(data: MyCoinResponseModel) {
-    if (data.currency) {
-      this.currency = data.currency;
+    if (data.symbol) {
+      this.symbol = data.symbol;
     }
     if (data.balance) {
       this.balance = data.balance;
@@ -43,39 +51,37 @@ export default class MyCoin implements MyCoinModel {
     if (data.locked) {
       this.locked = data.locked;
     }
-    if (data.avg_buy_price) {
-      this.avg_buy_price = data.avg_buy_price;
+    if (data.avgBuyPrice) {
+      this.avgBuyPrice = data.avgBuyPrice;
     }
-    if (data.avg_buy_price_modified) {
-      this.avg_buy_price_modified = data.avg_buy_price_modified;
+    if (data.avgBuyPriceModified) {
+      this.avgBuyPriceModified = data.avgBuyPriceModified;
     }
-    if (data.unit_currency) {
-      this.unit_currency = data.unit_currency;
+    if (data.marketCurrency) {
+      this.marketCurrency = data.marketCurrency;
     }
   }
 
+  /**
+   * 데이터 가져오기
+   * @returns
+   */
   getData() {
     return {
-      currency: this.currency,
+      symbol: this.symbol,
       balance: this.balance,
       locked: this.locked,
-      avg_buy_price: this.avg_buy_price,
-      avg_buy_price_modified: this.avg_buy_price_modified,
-      unit_currency: this.unit_currency,
+      avgBuyPrice: this.avgBuyPrice,
+      avgBuyPriceModified: this.avgBuyPriceModified,
       marketCurrency: this.marketCurrency,
     };
   }
 
-  setWebsocket() {
-    this.websocket = new WebSocket(this.marketCurrency, this.currency);
-    this.websocket.connect();
-  }
-
   /**
-   * 매도 주문 걸기
+   * TODO: 매도 주문 걸기
    * @param price 매도 단가
    * @param amount 매도 수량
-   * @returns
+   * @returns 성공여부
    */
   orderSell(price: number, amount: number): boolean {
     try {
@@ -94,20 +100,5 @@ export default class MyCoin implements MyCoinModel {
       });
       return false;
     }
-  }
-
-  /**
-   * 주문가능 금액/수량 세팅
-   * @param balance
-   * @returns
-   */
-  setBalance(balance: number): void {
-    this.balance = balance;
-
-    logger.info('Set balance.', {
-      main: 'MyCoin',
-      sub: 'setBalance',
-      data: this,
-    });
   }
 }

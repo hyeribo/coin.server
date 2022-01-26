@@ -7,12 +7,12 @@ import MarketService, {
   MarketCoinResponseModel,
 } from '@src/services/MarketService';
 import { MarketCurrencyType } from '@src/types/common';
-import constants from '@src/config/constants';
+import config from '@src/config';
 
 const marketService = new MarketService();
 
 const { WS_PING_TIME, WS_SNAPSHOT, WS_REALTIME, WS_CONN_LIMIT_PER_SEC } =
-  constants;
+  config;
 
 const UPBIT_WS_URL = process.env.UPBIT_WS_URL || '';
 

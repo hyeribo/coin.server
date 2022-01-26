@@ -3,9 +3,9 @@ import WebSocketClient from 'ws';
 import { v4 as uuid } from 'uuid';
 
 import { MarketCurrencyType } from '@src/types/common';
-import constants from '@src/config/constants';
+import config from '@src/config';
 
-const { WS_PING_TIME, WS_SNAPSHOT, WS_REALTIME } = constants;
+const { WS_PING_TIME, WS_SNAPSHOT, WS_REALTIME } = config;
 
 const UPBIT_WS_URL = process.env.UPBIT_WS_URL || '';
 
@@ -52,7 +52,7 @@ export interface TickerResponseModel {
 interface SendMessageModel {
   0: { ticket: string }; // 식별값 (uuid)
   1: {
-    type: 'ticker' | 'trade' | 'orderbook'; // 수신할 시세 타입
+    type: 'ticker' | 'trade' | 'orderbook'; // 수신할 시세 타입 (현재가/체결/호가)
     codes: string[]; // 수신할 시세 종목 정보. (대문자로 요청해야 한다.)
     isOnlySnapshot?: boolean; // 시세 스냅샷만 제공
     isOnlyRealtime?: boolean; // 실시간 시세만 제공
@@ -65,7 +65,8 @@ interface SendMessageModel {
 interface WebSocketModel {
   isAlive: boolean;
   marketCurrency: MarketCurrencyType;
-  currency: string;
+  symbol: string;
+  mSymbol: string; // 단위화폐-심볼 형식의 코드
   socket: WebSocketClient;
   pingInterval?: ReturnType<typeof setInterval>;
 
@@ -79,19 +80,21 @@ interface WebSocketModel {
 export default class WebSocket implements WebSocketModel {
   isAlive: boolean = false;
   marketCurrency;
-  currency = '';
+  symbol;
+  mSymbol;
   socket!: WebSocketClient;
   pingInterval?: ReturnType<typeof setInterval>;
 
-  constructor(marketCurrency: MarketCurrencyType, currency: string) {
+  constructor(marketCurrency: MarketCurrencyType, symbol: string) {
     if (!marketCurrency) {
       throw new Error('marketCurrency not provided.');
     }
-    if (!currency) {
+    if (!symbol) {
       throw new Error('currency not provided.');
     }
     this.marketCurrency = marketCurrency;
-    this.currency = currency;
+    this.symbol = symbol;
+    this.mSymbol = `${this.marketCurrency}-${this.symbol}`;
   }
 
   connect = () => {
@@ -99,7 +102,7 @@ export default class WebSocket implements WebSocketModel {
     this.socket.on('open', () => {
       logger.info('Connection opened.', {
         main: 'WebSocket',
-        data: { currency: this.currency },
+        data: { symbol: this.symbol },
       });
 
       this.heartbeat();
@@ -113,7 +116,10 @@ export default class WebSocket implements WebSocketModel {
     this.socket.on('message', this.handleMessage);
 
     this.socket.on('close', () => {
-      console.log('Connection closed.');
+      logger.info('Connection closed.', {
+        main: 'WebSocket',
+        data: { symbol: this.symbol },
+      });
     });
   };
 
@@ -125,7 +131,7 @@ export default class WebSocket implements WebSocketModel {
       { ticket: uuid() },
       {
         type: 'ticker',
-        codes: [`${this.marketCurrency}-${this.currency}`],
+        codes: [this.mSymbol],
         isOnlySnapshot: WS_SNAPSHOT,
         isOnlyRealtime: WS_REALTIME,
       },
