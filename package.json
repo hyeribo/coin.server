@@ -7,7 +7,7 @@
     "start": "npm run build:live",
     "build": "tsc -p .",
     "build:live": "nodemon --watch 'src/**/*.ts' --exec \"ts-node\" src/app.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_ENV=test mocha test/**/*.spec.ts -r ts-node/register -r tsconfig-paths/register -r dotenv/config"
   },
   "author": "",
   "license": "ISC",
@@ -24,18 +24,22 @@
     "ws": "^8.4.0"
   },
   "devDependencies": {
+    "@types/chai": "^4.3.0",
     "@types/jsonwebtoken": "^8.5.6",
     "@types/lodash": "^4.14.178",
+    "@types/mocha": "^9.1.0",
     "@types/node": "^17.0.6",
     "@types/uuid": "^8.3.3",
     "@types/ws": "^8.2.2",
     "@typescript-eslint/eslint-plugin": "^5.8.1",
     "@typescript-eslint/parser": "^5.8.1",
+    "chai": "^4.3.5",
     "eslint": "^8.6.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-import": "^2.25.3",
     "eslint-plugin-prettier": "^4.0.0",
+    "mocha": "^9.2.0",
     "module-alias": "^2.2.2",
     "nodemon": "^2.0.15",
     "prettier": "^2.5.1",
