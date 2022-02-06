@@ -11,8 +11,7 @@ import config from '@src/config';
 
 const marketService = new MarketService();
 
-const { WS_PING_TIME, WS_SNAPSHOT, WS_REALTIME, WS_CONN_LIMIT_PER_SEC } =
-  config;
+const { WS_PING_TIME } = config;
 
 const UPBIT_WS_URL = process.env.UPBIT_WS_URL || '';
 
@@ -192,26 +191,6 @@ export default class MarketWatcher implements MarketWatcherModel {
     this.socket.send(message);
     logger.verbose('send :', { main: 'MarketWatcher', data: params });
   }
-
-  /**
-   * The WebSocket protocol only works with text and binary data.
-   */
-  // sendMessage() {
-  //   const params = [
-  //     { ticket: uuid() },
-  //     {
-  //       type: 'ticker',
-  //       codes: [`${this.marketCurrency}-123`],
-  //       isOnlySnapshot: WS_SNAPSHOT,
-  //       isOnlyRealtime: WS_REALTIME,
-  //     },
-  //     { format: 'SIMPLE' },
-  //   ];
-
-  //   const message = Buffer.from(JSON.stringify(params));
-  //   this.socket.send(message);
-  //   logger.verbose('send :', { main: 'WebSocket', data: params });
-  // }
 
   /**
    * The WebSocket protocol only works with text and binary data.

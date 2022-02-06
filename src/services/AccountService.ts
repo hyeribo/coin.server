@@ -13,6 +13,7 @@ export interface MyCoinResponseModel {
   avgBuyPrice: number; // 매수평균가
   avgBuyPriceModified: boolean; // 매수평균가 수정 여부
   marketCurrency: MarketCurrencyType; // 평단가 기준 화폐
+  mSymbol: string; // 마켓-심볼 코드
 }
 
 interface AccountServiceModel {
@@ -35,6 +36,7 @@ export default class AccountService implements AccountServiceModel {
         avgBuyPrice: +obj.avg_buy_price,
         avgBuyPriceModified: obj.avg_buy_price_modified,
         marketCurrency: obj.unit_currency,
+        mSymbol: `${obj.unit_currency}-${obj.currency}`,
       }));
 
       coins = coins.filter(

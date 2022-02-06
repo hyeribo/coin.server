@@ -10,7 +10,11 @@ export type MarketWarningType = 'NONE' | 'CAUTION';
 // - ASK : 매도
 // - BID : 매수
 export type OrderSideType = 'ASK' | 'BID';
-export type OrderSideLowerType = 'ask' | 'bid';
+// export type OrderSideLowerType = 'ask' | 'bid';
+export enum OrderSideLowerType {
+  ask = 'ask',
+  bid = 'bid',
+}
 
 // 주문 상태
 // - wait : 체결 대기 (default)
@@ -29,7 +33,12 @@ export type OrderStateType = 'wait' | 'watch' | 'done' | 'cancel';
 // - limit : 지정가 주문
 // - price : 시장가 주문(매수)
 // - market : 시장가 주문(매도)
-export type OrderType = 'limit' | 'price' | 'market';
+// export type OrderType = 'limit' | 'price' | 'market';
+export enum OrderType {
+  limit = 'limit',
+  price = 'price',
+  market = 'market',
+}
 
 // 정렬 방식
 // - asc : 오름차순
@@ -40,4 +49,4 @@ export type DataOrderByType = 'asc' | 'desc';
 // - ticker : 현재가
 // - trade : 체결
 // - orderbook : 호가
-export type TickerType = 'ticker' | 'trade' | 'orderbook';
+export type MessageType = 'ticker' | 'trade' | 'orderbook';

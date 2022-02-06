@@ -21,14 +21,26 @@ export default class Worker {
     this.marketCurrency = marketCurrency;
   }
 
+  /**
+   * 내가 가진 코인들 각각 거래 시작
+   */
+  startTradeAllCoins() {
+    // 내가 가진 모든 코인들 가져오기
+    const allCoins = this.account.getCoins();
+
+    // 모든 코인 작업 시작
+    allCoins.forEach((coin) => {
+      coin.startTrade();
+    });
+  }
+
   async start() {
     try {
       // 내 계정 생성
       this.account = new Account(this.marketCurrency);
       await this.account.init();
 
-      // 계정이 가진 코인들에 각각 웹소켓 연결
-      // this.connectWebSocketToMyCoins();
+      this.startTradeAllCoins();
 
       // 시장 감시자 생성
       // this.marketWatcher = new MarketWatcher(this.marketCurrency);
@@ -41,22 +53,22 @@ export default class Worker {
 
   async stop() {
     this.status = 'stop';
+
+    // 내가 가진 모든 코인들 가져오기
+    const allCoins = this.account.getCoins();
+
+    if (allCoins) {
+      // 모든 코인 작업 중지
+      allCoins.forEach((coin) => {
+        if (coin.status === 'started') {
+          coin.stopTrade();
+        }
+      });
+    }
+
     logger.verbose('Worker stopped.', {
       main: 'Worker',
       data: { status: this.status },
-    });
-  }
-
-  /**
-   * 내가 가진 코인들을 각각 웹소켓에 연결
-   */
-  connectWebSocketToMyCoins() {
-    // 내가 가진 모든 코인들 가져오기
-    const allCoins = this.account.getCoins();
-    console.log('allCoins', allCoins);
-    // 웹소켓 연결
-    allCoins.forEach((coin) => {
-      coin.connect();
     });
   }
 }

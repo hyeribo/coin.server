@@ -9,13 +9,13 @@ import {
 } from '@src/types/common';
 
 /*************** getOrderableInfoByCoin START ***************/
-interface OrderInfoMarketRestrictions {
+export interface OrderInfoMarketRestrictions {
   currency: string; // 화폐를 의미하는 영문 대문자 코드
   price_unit: string; // 주문금액 단위
   min_total: number; // 최소 매도/매수 금액
 }
 
-interface OrderInfoMarketModel {
+export interface OrderInfoMarketModel {
   id: string; // 마켓의 유일 키 (ex: KRW-BORA)
   name: string; // 마켓 이름 (ex: KRW-BORA)
   order_types: string[]; // 지원 주문 방식 (TODO: type 샘플 필요. )
@@ -26,7 +26,7 @@ interface OrderInfoMarketModel {
   state: string; // 마켓 운영 상태
 }
 
-interface OrderInfoAskBidAccountModel {
+export interface OrderInfoAskBidAccountModel {
   currency: string; // 화폐를 의미하는 영문 대문자 코드
   balance: string; // 주문가능 금액(bid)/수량(ask)
   locked: string; // 주문 중 묶여있는 금액(bid)/수량(ask)
@@ -36,7 +36,7 @@ interface OrderInfoAskBidAccountModel {
 }
 
 // 종목별 주문 가능 정보 response 모델
-interface OrderableInfoModel {
+export interface OrderableInfoModel {
   bid_fee: string; // 매수 수수료 비율
   ask_fee: string; // 매도 수수료 비율
   market: OrderInfoMarketModel; // 마켓에 대한 정보
@@ -47,7 +47,7 @@ interface OrderableInfoModel {
 
 /*************** getOrderDetail & getOrders START ***************/
 // 주문 체결 모델
-interface OrderTradesModel {
+export interface OrderTradesModel {
   market: string; // 마켓의 유일 키
   uuid: string; // 체결의 고유 아이디
   price: string; // 체결 가격
@@ -58,9 +58,9 @@ interface OrderTradesModel {
 }
 
 // 주문 response 모델
-interface OrderModel {
+export interface OrderModel {
   uuid: string; // 주문의 고유 아이디
-  side: string; // 주문 종류
+  side: OrderSideLowerType; // 주문 종류
   ord_type: string; // 주문 방식
   price: string; // 주문 당시 화폐 가격
   state: string; // 주문 상태
@@ -77,12 +77,12 @@ interface OrderModel {
 }
 
 // 단일 주문 response 모델
-interface OrderDetailModel extends OrderModel {
+export interface OrderDetailModel extends OrderModel {
   trades: OrderTradesModel; // 체결
 }
 
 // 주문 목록 request 모델
-interface OrdersRequestModel {
+export interface OrdersRequestModel {
   market?: string; // 종목코드
   uuids?: string[]; // 주문 UUID의 목록
   identifiers?: string[]; // 주문 identifier의 목록
@@ -95,8 +95,8 @@ interface OrdersRequestModel {
 
 /*************** getOrderDetail & getOrders END ***************/
 
-/*************** postOrder START ***************/
-interface OrderRequestModel {
+/*************** order START ***************/
+export interface OrderRequestModel {
   market: string; // 마켓 ID (필수)
   side: OrderSideLowerType; // 주문 종류 (필수)
   volume: string; // 주문량 (지정가, 시장가 매도 시 필수)
@@ -104,154 +104,184 @@ interface OrderRequestModel {
   ord_type: OrderType; // 주문 타입 (필수)
   identifier?: string; // 조회용 사용자 지정값 (선택)
 }
-/*************** postOrder END ***************/
+/*************** order END ***************/
 
 export interface OrderServiceModel {
   getOrderableInfoByCoin: (market: string) => Promise<OrderableInfoModel>;
 }
 
-export default class OrderService implements OrderServiceModel {
-  /**
-   * 종목별 주문 가능 정보
-   * @param market 조회할 종목코드 (ex: KRW-BORA)
-   * @returns 주문 가능 정보
-   */
-  async getOrderableInfoByCoin(market: string): Promise<OrderableInfoModel> {
-    try {
-      const res = await privateAPI.get('/orders/chance', {
-        params: { market: market },
-      });
+/******************************/
+/******************************/
+/******************************/
+/******************************/
+/******************************/
+/******************************/
 
-      logger.info('data.', {
-        main: 'OrderService',
-        sub: 'getOrderableInfoByCoin',
-        data: res.data,
-      });
+/**
+ * 종목별 주문 가능 정보
+ * @param mSymbol 조회할 종목코드 (ex: KRW-BORA)
+ * @returns 주문 가능 정보
+ */
+export async function getOrderableInfoByCoin(
+  mSymbol: string,
+): Promise<OrderableInfoModel> {
+  try {
+    const res = await privateAPI.get('/orders/chance', {
+      params: { market: mSymbol },
+    });
 
-      return res.data || {};
-    } catch (error: any) {
-      console.log(error);
-      logger.error('error.', {
-        main: 'OrderService',
-        sub: 'getOrderableInfoByCoin',
-        data: { error },
-      });
-      throw error;
-    }
-  }
+    logger.info('data.', {
+      main: 'OrderService',
+      sub: 'getOrderableInfoByCoin',
+      data: res.data,
+    });
 
-  /**
-   * 개별 주문 조회 (uuid와 identifier 둘 중 하나 필수)
-   * @param uuid 주문 UUID
-   * @param identifier 조회용 사용자 지정 값
-   * @returns 주문 상세 정보
-   */
-  async getOrderDetail(
-    data: { uuid?: string; identifier?: string } = {},
-  ): Promise<OrderDetailModel> {
-    try {
-      if (!data.uuid && !data.identifier) {
-        throw new Error('Both uuid and identifier are empty.');
-      }
-
-      const params = {
-        uuid: data.uuid,
-        identifier: data.identifier,
-      };
-      const res = await privateAPI.get('/order', {
-        params,
-      });
-
-      logger.info('data.', {
-        main: 'OrderService',
-        sub: 'getOrderDetail',
-        data: res.data,
-      });
-
-      return res.data || {};
-    } catch (error: any) {
-      console.log(error);
-      logger.http('error.', {
-        main: 'OrderService',
-        sub: 'getOrderDetail',
-        data: { error },
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * 주문 목록 조회
-   * @param data 조회할 주문 정보
-   * @returns 주문 목록
-   */
-  async getOrders(data: OrdersRequestModel): Promise<OrderModel[]> {
-    try {
-      // TODO: states 검사
-
-      const res = await privateAPI.get('/orders', {
-        data,
-      });
-
-      return res.data || [];
-    } catch (error) {
-      logger.http('error.', {
-        main: 'OrderService',
-        sub: 'getOrders',
-        data: { error },
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * 주문 취소 접수 (uuid와 identifier 둘 중 하나 필수)
-   * @param uuid 주문 UUID
-   * @param identifier 조회용 사용자 지정 값
-   * @returns 주문 취소 정보
-   */
-  async cancelOrder(
-    data: { uuid?: string; identifier?: string } = {},
-  ): Promise<OrderModel> {
-    try {
-      if (!data.uuid && !data.identifier) {
-        throw new Error('Both uuid and identifier are empty.');
-      }
-
-      const res = await privateAPI.delete('/order', {
-        data,
-      });
-
-      return res.data || {};
-    } catch (error) {
-      logger.http('error.', {
-        main: 'OrderService',
-        sub: 'cancelOrder',
-        data: { error },
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * 주문하기
-   * @param data 주문 정보
-   * @returns 주문 정보
-   */
-  async postOrder(data: OrderRequestModel): Promise<OrderModel> {
-    try {
-      const res = await privateAPI.post('/orders', {
-        data,
-      });
-
-      return res.data || {};
-    } catch (error) {
-      logger.http('error.', {
-        main: 'OrderService',
-        sub: 'postOrder',
-        data: { error },
-      });
-      throw error;
-    }
+    return res.data || {};
+  } catch (error: any) {
+    console.log(error);
+    logger.error('error.', {
+      main: 'OrderService',
+      sub: 'getOrderableInfoByCoin',
+      data: { error },
+    });
+    throw error;
   }
 }
+
+/**
+ * 개별 주문 조회 (uuid와 identifier 둘 중 하나 필수)
+ * @param uuid 주문 UUID
+ * @param identifier 조회용 사용자 지정 값
+ * @returns 주문 상세 정보
+ */
+export async function getOrderDetail(
+  data: { uuid?: string; identifier?: string } = {},
+): Promise<OrderDetailModel> {
+  try {
+    if (!data.uuid && !data.identifier) {
+      throw new Error('Both uuid and identifier are empty.');
+    }
+
+    const params = {
+      uuid: data.uuid,
+      identifier: data.identifier,
+    };
+    const res = await privateAPI.get('/order', {
+      params,
+    });
+
+    logger.info('data.', {
+      main: 'OrderService',
+      sub: 'getOrderDetail',
+      data: res.data,
+    });
+
+    return res.data || {};
+  } catch (error: any) {
+    console.log(error);
+    logger.http('error.', {
+      main: 'OrderService',
+      sub: 'getOrderDetail',
+      data: { error },
+    });
+    throw error;
+  }
+}
+
+export async function getWaitingOrders(
+  marketCurrency: string,
+): Promise<OrderModel[]> {
+  try {
+    const res = await privateAPI.get('/orders', {
+      data: { market: marketCurrency, state: 'wait' },
+    });
+
+    return res.data || [];
+  } catch (error) {
+    logger.http('error.', {
+      main: 'OrderService',
+      sub: 'getWaitingOrders',
+      data: { error },
+    });
+    throw error;
+  }
+}
+
+/**
+ * 주문 목록 조회
+ * @param data 조회할 주문 정보
+ * @returns 주문 목록
+ */
+export async function getOrders(
+  data: OrdersRequestModel,
+): Promise<OrderModel[]> {
+  try {
+    // TODO: states 검사
+
+    const res = await privateAPI.get('/orders', {
+      data,
+    });
+
+    return res.data || [];
+  } catch (error) {
+    logger.http('error.', {
+      main: 'OrderService',
+      sub: 'getOrders',
+      data: { error },
+    });
+    throw error;
+  }
+}
+
+/**
+ * 주문 취소 접수 (uuid와 identifier 둘 중 하나 필수)
+ * @param uuid 주문 UUID
+ * @param identifier 조회용 사용자 지정 값
+ * @returns 주문 취소 정보
+ */
+export async function cancelOrder(
+  data: { uuid?: string; identifier?: string } = {},
+): Promise<OrderModel> {
+  try {
+    if (!data.uuid && !data.identifier) {
+      throw new Error('Both uuid and identifier are empty.');
+    }
+
+    const res = await privateAPI.delete('/order', {
+      data,
+    });
+
+    return res.data || {};
+  } catch (error) {
+    logger.http('error.', {
+      main: 'OrderService',
+      sub: 'cancelOrder',
+      data: { error },
+    });
+    throw error;
+  }
+}
+
+/**
+ * 주문하기
+ * @param data 주문 정보
+ * @returns 주문 정보
+ */
+export async function order(data: OrderRequestModel): Promise<OrderModel> {
+  try {
+    const res = await privateAPI.post('/orders', {
+      data,
+    });
+
+    return res.data || {};
+  } catch (error) {
+    logger.http('error.', {
+      main: 'OrderService',
+      sub: 'order',
+      data: { error },
+    });
+    throw error;
+  }
+}
+
+export default function Order() {}
