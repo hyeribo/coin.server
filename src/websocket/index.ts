@@ -2,8 +2,7 @@ import logger from '@src/config/winston';
 import WebSocketClient from 'ws';
 import { v4 as uuid } from 'uuid';
 
-import { MessageType, MarketCurrencyType } from '@src/types/common';
-import { MyCoinResponseModel } from '@src/services/AccountService';
+import { MessageType } from '@src/types/common';
 import config from '@src/config';
 
 const { WS_PING_TIME } = config;

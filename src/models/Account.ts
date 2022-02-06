@@ -5,8 +5,9 @@ import MyCoin from '@src/models/MyCoin';
 
 import { getWaitingOrders, OrderModel } from '@src/services/OrderService';
 
-import AccountService, {
+import {
   MyCoinResponseModel,
+  getAccountInfo,
 } from '@src/services/AccountService';
 
 import config from '@src/config';
@@ -16,8 +17,6 @@ import { MarketCurrencyType } from '@src/types/common';
 const { MAX_PROC_COIN_COUNT, MIN_TRADABLE_BALANCE, INCLUDE_COINS } = config;
 
 type AccountStatusType = 'pending' | 'checking' | 'checked' | 'failed';
-
-const accountService = new AccountService();
 
 export default class Account {
   private status: AccountStatusType = 'pending';
@@ -182,8 +181,7 @@ export default class Account {
       this.setStatus('checking');
 
       // 내가 가지고있는 코인 리스트 가져오기
-      const myAccountInfo: MyCoinResponseModel[] =
-        await accountService.getAccountInfo();
+      const myAccountInfo: MyCoinResponseModel[] = await getAccountInfo();
 
       // 체결 대기중인 주문 목록 가져오기
       const waitingOrders: OrderModel[] = await getWaitingOrders(

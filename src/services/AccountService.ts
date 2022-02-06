@@ -20,36 +20,34 @@ interface AccountServiceModel {
   getAccountInfo: () => Promise<object[]>;
 }
 
-export default class AccountService implements AccountServiceModel {
-  /**
-   * 현재 가지고있는 코인 리스트 가져오기
-   * @returns
-   */
-  async getAccountInfo(): Promise<MyCoinResponseModel[]> {
-    try {
-      const res = await privateAPI.get('/accounts');
+/**
+ * 현재 가지고있는 코인 리스트 가져오기
+ * @returns
+ */
+export async function getAccountInfo(): Promise<MyCoinResponseModel[]> {
+  try {
+    const res = await privateAPI.get('/accounts');
 
-      let coins = (res.data || []).map((obj: any) => ({
-        symbol: obj.currency,
-        balance: +obj.balance,
-        locked: +obj.locked,
-        avgBuyPrice: +obj.avg_buy_price,
-        avgBuyPriceModified: obj.avg_buy_price_modified,
-        marketCurrency: obj.unit_currency,
-        mSymbol: `${obj.unit_currency}-${obj.currency}`,
-      }));
+    let coins = (res.data || []).map((obj: any) => ({
+      symbol: obj.currency,
+      balance: +obj.balance,
+      locked: +obj.locked,
+      avgBuyPrice: +obj.avg_buy_price,
+      avgBuyPriceModified: obj.avg_buy_price_modified,
+      marketCurrency: obj.unit_currency,
+      mSymbol: `${obj.unit_currency}-${obj.currency}`,
+    }));
 
-      coins = coins.filter(
-        (coin: MyCoinResponseModel) => !EXCLUDE_COINS.includes(coin.symbol),
-      );
-      return coins;
-    } catch (error) {
-      logger.error('Network error.', {
-        main: 'AccountService',
-        sub: 'getAccountInfo',
-        data: error,
-      });
-      throw error;
-    }
+    coins = coins.filter(
+      (coin: MyCoinResponseModel) => !EXCLUDE_COINS.includes(coin.symbol),
+    );
+    return coins;
+  } catch (error) {
+    logger.error('Network error.', {
+      main: 'AccountService',
+      sub: 'getAccountInfo',
+      data: error,
+    });
+    throw error;
   }
 }
