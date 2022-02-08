@@ -251,13 +251,6 @@ export async function order(data: OrderRequestModel): Promise<OrderModel> {
 
     return res.data || {};
   } catch (error) {
-    logger.http('error.', {
-      main: 'OrderService',
-      sub: 'order',
-      data: { error },
-    });
     throw error;
   }
 }
-
-export default function Order() {}

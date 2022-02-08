@@ -23,6 +23,8 @@ const { MIN_ORDER_AMOUNT } = config;
 export default class MyCoin {
   public status: 'stopped' | 'started' = 'stopped';
 
+  private queue: Queue; // 작업 큐
+
   // tickerWS: TickerWS; // 현재가 웹소켓
   // tradeWS: TradeWS; // 체결 웹소켓
   orderbookWS: OrderbookWS; // 호가 웹소켓
@@ -57,8 +59,6 @@ export default class MyCoin {
   private marketCurrencyLimit: number; // 작업에 할당된 총 금액
   private marketCurrencyBalance: number = 0; // 매수 가능 금액
   private marketCurrencyLocked: number = 0; // 매수 대기중인 금액
-
-  private queue: Queue; // 작업 큐
 
   constructor(
     obj: MyCoinResponseModel,
@@ -97,9 +97,6 @@ export default class MyCoin {
     price: number;
   }): Promise<boolean> {
     try {
-      // const identifier = uuid();
-      // // this.bids[identifier] = { state: 'pending' };
-
       const params = {
         market: this.mSymbol,
         side: OrderSideLowerType.bid,
@@ -109,14 +106,19 @@ export default class MyCoin {
         // identifier,
       };
 
+      logger.info('Order bid requested.', {
+        main: 'MyCoin',
+        sub: 'orderBid',
+        data: params,
+      });
+
       const res = await order(params);
       this.bids.push(res);
 
       logger.info('Order bid successed.', {
         main: 'MyCoin',
-        sub: 'orderAsk',
-        params: params,
-        res,
+        sub: 'orderBid',
+        data: res,
       });
       return true;
     } catch (error) {
@@ -152,14 +154,19 @@ export default class MyCoin {
         // identifier,
       };
 
+      logger.info('Order asks requested.', {
+        main: 'MyCoin',
+        sub: 'orderAsk',
+        data: params,
+      });
+
       const res = await order(params);
       this.asks.push(res);
 
       logger.info('Order ask successed.', {
         main: 'MyCoin',
         sub: 'orderAsk',
-        params: params,
-        res,
+        data: res,
       });
       return true;
     } catch (error) {
@@ -270,19 +277,43 @@ export default class MyCoin {
     // 최소 거래 금액 이상인지 체크
     const isEnableOrder =
       this.marketCurrencyBalance - totalFee > MIN_ORDER_AMOUNT;
-    if (!isEnableOrder) return false;
+    if (!isEnableOrder) {
+      logger.info('Unable to bid.', {
+        main: 'MyCoin',
+        sub: 'checkEnableBid',
+        data: {
+          volume: bidVolume,
+          price: bidPrice,
+          totalBidPrice: this.marketCurrencyBalance,
+          isEnableOrder,
+        },
+      });
+      return false;
+    }
     // 매수시 얻을 이익
     const profit = this.priceUnit * bidVolume - totalFee;
     // 거래 수수료보다 이익이 큰지 체크
     const isProfitable = profit > totalFee;
-    if (!isProfitable) return false;
+    if (!isProfitable) {
+      logger.info('Not profitable to bid.', {
+        main: 'MyCoin',
+        sub: 'checkEnableBid',
+        data: {
+          volume: bidVolume,
+          price: bidPrice,
+          profit,
+          isProfitable,
+        },
+      });
+      return false;
+    }
 
     logger.info('Passed enable bid checking.', {
       main: 'MyCoin',
       sub: 'checkEnableBid',
       data: {
         volume: bidVolume,
-        price: bidPrice,
+        price: this.marketCurrencyBalance,
       },
     });
 
@@ -304,19 +335,43 @@ export default class MyCoin {
     // 총 매도할 금액
     const totalAskPrice = this.ask_account.balance * askPrice;
     // 최소 거래 금액 이상인지 체크
-    const isEnableOrder = askPrice > MIN_ORDER_AMOUNT;
-    if (!isEnableOrder) return false;
+    const isEnableOrder = totalAskPrice > MIN_ORDER_AMOUNT;
+    if (!isEnableOrder) {
+      logger.info('Unable to ask.', {
+        main: 'MyCoin',
+        sub: 'checkEnableAsk',
+        data: {
+          volume: this.ask_account.balance,
+          price: askPrice,
+          totalAskPrice,
+          isEnableOrder,
+        },
+      });
+      return false;
+    }
     // 매도 수수료
     const totalFee = totalAskPrice * this.ask_fee;
     // 매도시 얻을 이익
     const profit = this.priceUnit * this.ask_account.balance - totalFee;
     // 거래 수수료보다 이익이 큰지 체크
     const isProfitable = profit > totalFee;
-    if (!isProfitable) return false;
+    if (!isProfitable) {
+      logger.info('Not profitable to ask.', {
+        main: 'MyCoin',
+        sub: 'checkEnableAsk',
+        data: {
+          volume: this.ask_account.balance,
+          price: askPrice,
+          profit,
+          isProfitable,
+        },
+      });
+      return false;
+    }
 
     logger.info('Passed enable ask checking.', {
       main: 'MyCoin',
-      sub: 'checkEnableBid',
+      sub: 'checkEnableAsk',
       data: {
         volume: this.ask_account.balance,
         price: askPrice,
@@ -384,16 +439,17 @@ export default class MyCoin {
       // 주문가능 액수 계산 후 주문하기
       const works = [];
       // 매수 가능하면 매수요청 work 추가
-      if (this.bids.length < 2) {
-        const enableBidInfo = this.checkEnableBid();
-        if (enableBidInfo) {
-          logger.info('Pushed bid work.', {
-            main: 'MyCoin',
-            sub: 'proceed',
-          });
-          works.push(() => this.orderBid(enableBidInfo));
-        }
-      }
+      // if (this.bids.length < 2) {
+      //   const enableBidInfo = this.checkEnableBid();
+      //   if (enableBidInfo) {
+      //     logger.info('Pushed bid work.', {
+      //       main: 'MyCoin',
+      //       sub: 'proceed',
+      //     });
+      //     // works.push(() => this.orderBid(enableBidInfo));
+      //     await this.orderBid(enableBidInfo);
+      //   }
+      // }
       // 매도 가능하면 매도요청 work 추가
       if (this.asks.length < 2) {
         const enableAskInfo = this.checkEnableAsk();
@@ -402,11 +458,11 @@ export default class MyCoin {
             main: 'MyCoin',
             sub: 'proceed',
           });
-
-          works.push(() => this.orderAsk(enableAskInfo));
+          // works.push(() => this.orderAsk(enableAskInfo));
+          await this.orderAsk(enableAskInfo);
         }
       }
-      await Promise.all(works);
+      // await Promise.all(works);
     } catch (error) {
       logger.error('Error occured while proceed.', {
         main: 'MyCoin',
@@ -485,20 +541,26 @@ export default class MyCoin {
         const changedOrders: OrderDetailModel[] =
           this.getChangedOrders(resList);
         // 변화한 주문이 있다면, 거래 진행하기
+        logger.verbose('Detected change. (start proceed)', {
+          main: 'MyCoin',
+          sub: 'watchTrade',
+          data: { changedOrders },
+        });
         if (changedOrders.length) {
-          this.proceed(changedOrders);
-          logger.verbose('Detected change. (start proceed)', {
-            main: 'MyCoin',
-            sub: 'watchTrade',
-            data: { changedOrders },
+          // this.proceed(changedOrders);
+          this.queue.enqueue(async () => {
+            await this.proceed(changedOrders);
           });
         }
       } else {
         // 걸려있는 주문이 하나도 없을때
-        this.proceed();
+        // this.proceed();
         logger.verbose('No order exist. (start proceed)', {
           main: 'MyCoin',
           sub: 'watchTrade',
+        });
+        this.queue.enqueue(async () => {
+          await this.proceed();
         });
       }
     } catch (error) {
@@ -521,7 +583,7 @@ export default class MyCoin {
       }
       onReady();
 
-      logger.verbose('Ready to work.', {
+      logger.info('Ready to work.', {
         main: 'MyCoin',
         sub: 'checkReady',
         data: {
