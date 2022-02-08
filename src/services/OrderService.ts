@@ -78,7 +78,6 @@ export interface OrderModel {
 
 // 단일 주문 response 모델
 export interface OrderDetailModel extends OrderModel {
-  orderIndex: number; // MyCoin에서 주문의 인덱스를 판단하기 위한 임시값
   trades: OrderTradeModel[]; // 체결
 }
 
@@ -131,20 +130,8 @@ export async function getOrderableInfoByCoin(
       params: { market: mSymbol },
     });
 
-    logger.info('data', {
-      main: 'OrderService',
-      sub: 'getOrderableInfoByCoin',
-      data: res.data,
-    });
-
     return res.data || {};
   } catch (error: any) {
-    console.log(error);
-    logger.error('error.', {
-      main: 'OrderService',
-      sub: 'getOrderableInfoByCoin',
-      data: { error },
-    });
     throw error;
   }
 }

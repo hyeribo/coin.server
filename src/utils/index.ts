@@ -53,3 +53,35 @@ export function checkPositiveTicker(ticker: any) {
 
   return diffRate <= 10 && isRise;
 }
+
+/**
+ * 원화 마켓은 호가 별 주문 가격의 단위가 다르다.
+ * 현재가별 주문 가격 단위를 알려준다.
+ * @param tradePrice
+ * @returns
+ */
+export function getPriceUnit(tradePrice: number): number {
+  if (tradePrice > 2_000_000) {
+    return 1_000;
+  } else if (tradePrice >= 1_000_000 && tradePrice < 2_000_000) {
+    return 500;
+  } else if (tradePrice >= 500_000 && tradePrice < 1_000_000) {
+    return 100;
+  } else if (tradePrice >= 100_000 && tradePrice < 500_000) {
+    return 50;
+  } else if (tradePrice >= 10_000 && tradePrice < 100_000) {
+    return 10;
+  } else if (tradePrice >= 1_000 && tradePrice < 10_000) {
+    return 5;
+  } else if (tradePrice >= 100 && tradePrice < 1_000) {
+    return 1;
+  } else if (tradePrice >= 10 && tradePrice < 100) {
+    return 0.1;
+  } else if (tradePrice >= 1 && tradePrice < 10) {
+    return 0.01;
+  } else if (tradePrice >= 0.1 && tradePrice < 1) {
+    return 0.001;
+  } else {
+    return 0.000_1;
+  }
+}

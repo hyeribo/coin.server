@@ -2,7 +2,7 @@ import logger from '@src/config/winston';
 
 import WebSocket from '@src/websocket';
 
-export interface WSOrderbookUnitsModel {
+export interface WSOrderbookUnitModel {
   ap: number; // 매도호가
   bp: number; // 매수 호가
   as: number; // 매도 잔량
@@ -16,13 +16,13 @@ export interface WSOrderbookModel {
   cd: string; // mSymbol
   tas: number; // 호가 매도 총 잔량
   tbs: number; // 호가 매수 총 잔량
-  obu: WSOrderbookUnitsModel[]; // 호가
+  obu: WSOrderbookUnitModel[]; // 호가
 }
 
 export default class OrderbookWS extends WebSocket {
   isReady: boolean = false; // 준비 여부. (소켓 연결 & init snapshot)
   isUpdated: boolean = false; // 최신 데이터 갱신 여부.
-  snapshot!: WSOrderbookModel;
+  units!: WSOrderbookModel;
 
   constructor(mSymbol: string) {
     super(mSymbol, 'orderbook');
@@ -33,7 +33,8 @@ export default class OrderbookWS extends WebSocket {
    * @param data
    */
   onConnect() {
-    this.sendMessage(true, false);
+    this.sendMessage(true, false); // 스냅샷만
+    // this.sendMessage();
   }
 
   /**
@@ -46,16 +47,20 @@ export default class OrderbookWS extends WebSocket {
 
     if (message.ty === 'orderbook') {
       // 맨 처음 요청 경우 isReady 처리.
-      if (!this.snapshot) {
+      if (!this.units) {
         this.isReady = true;
       }
-      this.snapshot = message;
+      this.units = message;
       this.isUpdated = true;
 
-      logger.verbose('Orderbook received :', {
+      logger.verbose('Orderbook updated.', {
         main: 'WebSocket',
-        data: { message },
+        // data: { message },
       });
+      // logger.verbose('Orderbook received :', {
+      //   main: 'WebSocket',
+      //   data: { message },
+      // });
     }
   }
 
@@ -81,7 +86,7 @@ export default class OrderbookWS extends WebSocket {
    * @param index
    * @returns
    */
-  get orderbookUnits(): WSOrderbookUnitsModel[] {
-    return this.snapshot.obu;
+  get orderbookUnits(): WSOrderbookUnitModel[] {
+    return this.units.obu;
   }
 }

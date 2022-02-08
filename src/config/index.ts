@@ -23,16 +23,18 @@ export default {
   MAX_PROC_COIN_COUNT: 3, // 최대 자동화할 코인 수 (1/3/5/15)중에 하나
   // EXCLUDE_COINS: ['NONE'], // 프로세스에서 제외할 코인 (없을경우 'NONE'을 넣어준다.)
   EXCLUDE_COINS: ['APENFT'], // 프로세스에서 제외할 코인 (없을경우 'NONE'을 넣어준다.)
-  INCLUDE_COINS: [], // 프로세스에 포함할 코인
+  INCLUDE_COINS: ['BORA'], // 프로세스에 포함할 코인
   DEFAULT_MARKET_CURRENCY: 'KRW', // default 단위 화폐
   MIN_TRADABLE_BALANCE: {
     // 코인당 최소 거래 가능한 기준화폐 금액
-    KRW: 100_000,
+    // KRW: 100_000,
+    KRW: 5_000,
     BTC: 0.000_1,
   },
   MAX_TRADABLE_BALANCE: {
     // 코인당 최대 거래 가능한 기준화폐 금액
-    KRW: 150_000,
+    // KRW: 150_000,
+    KRW: 10_000,
     BTC: 0.000_1,
   },
   MAX_PID_AMOUNT_PER_ORDER: 200000, // 최대 주문 가능 금액

@@ -141,7 +141,7 @@ export default class Account {
    */
   private checkHavingCoin(symbol: string) {
     const result = this.coins.some((coin) => {
-      return coin.getData().symbol === symbol;
+      return coin.symbol === symbol;
     });
 
     logger.verbose('Check having coin.', {
