@@ -47,7 +47,7 @@ export interface OrderableInfoModel {
 
 /*************** getOrderDetail & getOrders START ***************/
 // 주문 체결 모델
-export interface OrderTradesModel {
+export interface OrderTradeModel {
   market: string; // 마켓의 유일 키
   uuid: string; // 체결의 고유 아이디
   price: string; // 체결 가격
@@ -78,7 +78,8 @@ export interface OrderModel {
 
 // 단일 주문 response 모델
 export interface OrderDetailModel extends OrderModel {
-  trades: OrderTradesModel; // 체결
+  orderIndex: number; // MyCoin에서 주문의 인덱스를 판단하기 위한 임시값
+  trades: OrderTradeModel[]; // 체결
 }
 
 // 주문 목록 request 모델
@@ -130,7 +131,7 @@ export async function getOrderableInfoByCoin(
       params: { market: mSymbol },
     });
 
-    logger.info('data.', {
+    logger.info('data', {
       main: 'OrderService',
       sub: 'getOrderableInfoByCoin',
       data: res.data,
@@ -170,20 +171,8 @@ export async function getOrderDetail(
       params,
     });
 
-    logger.info('data.', {
-      main: 'OrderService',
-      sub: 'getOrderDetail',
-      data: res.data,
-    });
-
     return res.data || {};
   } catch (error: any) {
-    console.log(error);
-    logger.http('error.', {
-      main: 'OrderService',
-      sub: 'getOrderDetail',
-      data: { error },
-    });
     throw error;
   }
 }

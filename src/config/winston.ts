@@ -10,7 +10,8 @@ const logFormat = printf((info) => {
   if (info.main) logMessage += `[${info.main}] :: `;
   if (info.sub) logMessage += `(${info.sub}) `;
   logMessage += `${info.message} `;
-  if (info.data) logMessage += JSON.stringify(info.data);
+  if (info.data && typeof info.data === 'object')
+    logMessage += JSON.stringify(info.data);
   return logMessage;
   // return `${info.timestamp} ${info.level}: ${info.message}`;
 });

@@ -27,10 +27,12 @@ export default class Worker {
   startTradeAllCoins() {
     // 내가 가진 모든 코인들 가져오기
     const allCoins = this.account.getCoins();
+    // 코인당 할당된 금액 가져오기
+    const enableBalancePerCoin = this.account.enableBalancePerCoin;
 
     // 모든 코인 작업 시작
     allCoins.forEach((coin) => {
-      coin.startTrade();
+      coin.startTrade(enableBalancePerCoin);
     });
   }
 

@@ -14,7 +14,12 @@ import config from '@src/config';
 import errorHandler from '@src/utils/errorHandler';
 import { MarketCurrencyType } from '@src/types/common';
 
-const { MAX_PROC_COIN_COUNT, MIN_TRADABLE_BALANCE, INCLUDE_COINS } = config;
+const {
+  MAX_PROC_COIN_COUNT,
+  MIN_TRADABLE_BALANCE,
+  MAX_TRADABLE_BALANCE,
+  INCLUDE_COINS,
+} = config;
 
 type AccountStatusType = 'pending' | 'checking' | 'checked' | 'failed';
 
@@ -27,7 +32,7 @@ export default class Account {
   };
   private coins: MyCoin[] = []; // 보유중인 코인 (기준화폐 제외)
   private count: number = 0; // 보유중인 코인 수 (기준화폐 제외)
-  private enableBalancePerCoin: number = 0;
+  public enableBalancePerCoin: number = 0;
 
   constructor(marketCurrency: MarketCurrencyType) {
     this.marketCurrency = marketCurrency;
@@ -216,9 +221,15 @@ export default class Account {
       });
 
       // 코인당 할당된 기준 화폐 금액 설정
-      this.enableBalancePerCoin = Math.floor(
-        (this.marketCurrencyCoin.balance + this.marketCurrencyCoin.locked) / 3,
+      const balancePerCoin = Math.floor(
+        (this.marketCurrencyCoin.balance + this.marketCurrencyCoin.locked) /
+          this.count,
       );
+      // 코인당 최대 거래 가능 금액을 넘으면, 최대 거래 가능 금액으로 설정
+      this.enableBalancePerCoin =
+        balancePerCoin > MAX_TRADABLE_BALANCE.KRW
+          ? MAX_TRADABLE_BALANCE.KRW
+          : balancePerCoin;
 
       // 거래 가능한 계정인지 확인
       this.checkTradable();

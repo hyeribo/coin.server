@@ -10,7 +10,7 @@ import { getAccountInfo } from '@src/services/AccountService';
 //   });
 // });
 
-describe('AccountService', function () {
+describe('MyCoin', function () {
   describe('getAccountInfo()', function () {
     it('현재 가지고있는 코인 리스트를 가져와라.', function (done) {
       return getAccountInfo()
