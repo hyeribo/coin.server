@@ -31,7 +31,6 @@ export const getToken = function (params?: { [key: string]: any }): string {
     const query = Object.keys(params)
       .map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(params[k]))
       .join('&');
-    console.log('query ===>', query);
 
     const hash = crypto.createHash(queryHashAlg);
     const queryHash = hash.update(query, 'utf-8').digest('hex');

@@ -12,7 +12,7 @@ export default class Worker {
   private status: 'start' | 'stop' = 'start';
   marketCurrency: MarketCurrencyType; // 단위 화폐
   account!: Account; // 계정 인스턴스
-  marketWatcher!: MarketWatcher;
+  // marketWatcher!: MarketWatcher;
 
   constructor(marketCurrency: MarketCurrencyType) {
     if (!marketCurrency) {

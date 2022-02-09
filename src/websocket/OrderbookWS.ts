@@ -53,11 +53,7 @@ export default class OrderbookWS extends WebSocket {
       this.units = message;
       this.isUpdated = true;
 
-      logger.verbose('Orderbook updated.', {
-        main: 'WebSocket',
-        // data: { message },
-      });
-      // logger.verbose('Orderbook received :', {
+      // logger.verbose('Orderbook updated.', {
       //   main: 'WebSocket',
       //   data: { message },
       // });

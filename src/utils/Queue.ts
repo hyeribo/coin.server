@@ -34,7 +34,7 @@ export default class Queue {
       if (this.rear) {
         this.rear.next = node; // 아닐 경우 마지막의 다음 노드로
 
-        logger.verbose('Add node to queue.', {
+        logger.info('Add node to queue.', {
           main: 'Queue',
           sub: 'enqueue',
         });
@@ -52,6 +52,10 @@ export default class Queue {
         sub: 'continueQueue',
       });
       await work();
+      logger.verbose('Finished work.', {
+        main: 'Queue',
+        sub: 'continueQueue',
+      });
     } else {
       logger.verbose('No node in queue. (Queue stopped.)', {
         main: 'Queue',

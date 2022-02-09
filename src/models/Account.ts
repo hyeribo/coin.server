@@ -60,7 +60,7 @@ export default class Account {
    * @param prevOrders 체결대기중인 주문 목록
    */
   private addCoin(coin: MyCoinResponseModel, prevOrders: OrderModel[]): void {
-    const myCoin = new MyCoin(coin, this.enableBalancePerCoin, prevOrders);
+    const myCoin = new MyCoin(coin, prevOrders);
     this.coins.push(myCoin);
     this.count++;
 
@@ -91,11 +91,7 @@ export default class Account {
       marketCurrency: this.marketCurrency,
       mSymbol,
     };
-    const emptyCoin = new MyCoin(
-      emptyCoinData,
-      this.enableBalancePerCoin,
-      prevOrders,
-    );
+    const emptyCoin = new MyCoin(emptyCoinData, prevOrders);
     this.coins.push(emptyCoin);
     this.count++;
 
@@ -113,11 +109,11 @@ export default class Account {
   private setStatus(status: AccountStatusType) {
     this.status = status;
 
-    logger.verbose("Set account's status.", {
-      main: 'Account',
-      sub: 'setStatus',
-      data: { status: this.status },
-    });
+    // logger.verbose("Set account's status.", {
+    //   main: 'Account',
+    //   sub: 'setStatus',
+    //   data: { status: this.status },
+    // });
   }
 
   /**
@@ -143,12 +139,6 @@ export default class Account {
     const result = this.coins.some((coin) => {
       return coin.symbol === symbol;
     });
-
-    logger.verbose('Check having coin.', {
-      main: 'Account',
-      sub: 'checkHavingCoin',
-      data: { value: symbol, result },
-    });
     return result;
   }
 
@@ -171,7 +161,7 @@ export default class Account {
       );
     }
 
-    logger.info('Passed tradable checking.', {
+    logger.verbose('Passed tradable checking.', {
       main: 'Account',
       sub: 'checkTradable',
     });
@@ -234,7 +224,7 @@ export default class Account {
       // 거래 가능한 계정인지 확인
       this.checkTradable();
 
-      logger.info('Account initialized.', {
+      logger.info('Initialized Account.', {
         main: 'Account',
         sub: 'init',
         data: this,

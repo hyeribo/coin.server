@@ -57,22 +57,17 @@ export default class MyCoin {
     avg_buy_price: number;
     avg_buy_price_modified: boolean;
   };
-  private marketCurrencyLimit: number; // 작업에 할당된 총 금액
+  private marketCurrencyLimit: number = 0; // 작업에 할당된 총 금액
   private marketCurrencyBalance: number = 0; // 매수 가능 금액
   private marketCurrencyLocked: number = 0; // 매수 대기중인 금액
 
-  constructor(
-    obj: MyCoinResponseModel,
-    marketCurrencyLimit: number,
-    prevOrders?: OrderModel[],
-  ) {
+  constructor(obj: MyCoinResponseModel, prevOrders?: OrderModel[]) {
     this.queue = new Queue(); // 큐 생성
 
     this.symbol = obj.symbol;
     this.marketCurrency = obj.marketCurrency;
     this.mSymbol = obj.mSymbol;
 
-    this.marketCurrencyLimit = marketCurrencyLimit;
     this.orderbookWS = new OrderbookWS(this.mSymbol);
 
     if (prevOrders) {
@@ -178,7 +173,7 @@ export default class MyCoin {
   /**
    * 매도/매수 수수료율 설정
    */
-  private async setTradeFee(): Promise<void> {
+  private async setCoinInfoForTrade(): Promise<void> {
     try {
       // 주문 가능 정보 가져오기
       const res: OrderableInfoModel = await getOrderableInfoByCoin(
@@ -187,6 +182,14 @@ export default class MyCoin {
       this.bid_fee = +res.bid_fee;
       this.ask_fee = +res.ask_fee;
 
+      const marketCurrencyLocked = this.bids.reduce((result, bid) => {
+        result += +bid.remaining_volume * this.processOpeningPrice.ap;
+        return result;
+      }, 0);
+      this.marketCurrencyLocked = marketCurrencyLocked;
+      this.marketCurrencyBalance =
+        this.marketCurrencyLimit - this.marketCurrencyLocked;
+
       logger.verbose('Initialized coin info.', {
         main: 'MyCoin',
         sub: 'initCoinInfo',
@@ -194,7 +197,10 @@ export default class MyCoin {
           mSymbol: this.mSymbol,
           bid_fee: this.bid_fee,
           ask_fee: this.ask_fee,
-          res,
+          priceUnit: this.priceUnit,
+          marketCurrencyLimit: this.marketCurrencyLimit,
+          marketCurrencyBalance: this.marketCurrencyBalance,
+          marketCurrencyLocked: this.marketCurrencyLocked,
         },
       });
     } catch (error) {
@@ -260,8 +266,9 @@ export default class MyCoin {
    */
   private checkEnableBid(): false | { volume: number; price: number } {
     // 최근 매도 시세
-    const currentAskPrice =
-      +this.currentAskTrade.price || this.processOpeningPrice.ap;
+    const currentAskPrice = this.currentAskTrade.price
+      ? +this.currentAskTrade.price
+      : this.processOpeningPrice.ap;
     // 매수 요청할 금액
     const bidPrice = currentAskPrice - this.priceUnit;
     // 매수 수수료
@@ -274,7 +281,7 @@ export default class MyCoin {
     const isEnableOrder =
       this.marketCurrencyBalance - totalFee > MIN_ORDER_AMOUNT;
     if (!isEnableOrder) {
-      logger.info('Unable to bid.', {
+      logger.verbose('Unable to bid.', {
         main: 'MyCoin',
         sub: 'checkEnableBid',
         data: {
@@ -291,7 +298,7 @@ export default class MyCoin {
     // 거래 수수료보다 이익이 큰지 체크
     const isProfitable = profit > totalFee;
     if (!isProfitable) {
-      logger.info('Not profitable to bid.', {
+      logger.verbose('Not profitable to bid.', {
         main: 'MyCoin',
         sub: 'checkEnableBid',
         data: {
@@ -324,8 +331,9 @@ export default class MyCoin {
    */
   private checkEnableAsk(): false | { volume: number; price: number } {
     // 최근 매수 시세
-    const currentBidPrice =
-      +this.currentBidTrade.price || this.processOpeningPrice.bp;
+    const currentBidPrice = this.currentBidTrade.price
+      ? +this.currentBidTrade.price
+      : this.processOpeningPrice.bp;
     // 매도 요청할 금액
     const askPrice = currentBidPrice + this.priceUnit;
     // 총 매도할 금액
@@ -333,14 +341,17 @@ export default class MyCoin {
     // 최소 거래 금액 이상인지 체크
     const isEnableOrder = totalAskPrice > MIN_ORDER_AMOUNT;
     if (!isEnableOrder) {
-      logger.info('Unable to ask.', {
+      logger.verbose('Unable to ask.', {
         main: 'MyCoin',
         sub: 'checkEnableAsk',
         data: {
           volume: this.ask_account.balance,
           price: askPrice,
+          currentBidPrice,
           totalAskPrice,
           isEnableOrder,
+          currentBidTrade: this.currentBidTrade,
+          processOpeningPrice: this.processOpeningPrice,
         },
       });
       return false;
@@ -352,7 +363,7 @@ export default class MyCoin {
     // 거래 수수료보다 이익이 큰지 체크
     const isProfitable = profit > totalFee;
     if (!isProfitable) {
-      logger.info('Not profitable to ask.', {
+      logger.verbose('Not profitable to ask.', {
         main: 'MyCoin',
         sub: 'checkEnableAsk',
         data: {
@@ -412,7 +423,17 @@ export default class MyCoin {
             });
             this.bidTrades[uuid] = trades;
           }
-          this.currentBidTrade = trades[trades.length - 1];
+          if (trades.length) {
+            this.currentBidTrade = trades[trades.length - 1];
+            logger.info('Updated currentBidTrade.', {
+              main: 'MyCoin',
+              sub: 'proceed',
+              data: {
+                trades: trades,
+                currentBidTrade: this.currentBidTrade,
+              },
+            });
+          }
         } else if (side === OrderSideLowerType.ask) {
           // 체결된 주문이 매도주문인경우
           if (+remaining_volume === 0) {
@@ -428,7 +449,17 @@ export default class MyCoin {
             });
             this.bidTrades[uuid] = trades;
           }
-          this.currentAskTrade = trades[trades.length - 1];
+          if (trades.length) {
+            this.currentAskTrade = trades[trades.length - 1];
+            logger.info('Updated currentAskTrade.', {
+              main: 'MyCoin',
+              sub: 'proceed',
+              data: {
+                trades: trades,
+                currentAskTrade: this.currentAskTrade,
+              },
+            });
+          }
         }
       });
 
@@ -491,22 +522,22 @@ export default class MyCoin {
       }
     });
 
-    if (changedOrders.length) {
-      logger.info('Order information has changed. (or the first task)', {
-        main: 'MyCoin',
-        sub: 'compareOrders',
-        data: {
-          changedOrders,
-          bids: this.bids,
-          bidTrades: this.bidTrades,
-        },
-      });
-    } else {
-      logger.verbose('Order information has not changed.', {
-        main: 'MyCoin',
-        sub: 'compareOrders',
-      });
-    }
+    // if (changedOrders.length) {
+    //   logger.info('Order information has changed. (or the first task)', {
+    //     main: 'MyCoin',
+    //     sub: 'compareOrders',
+    //     data: {
+    //       changedOrders,
+    //       bids: this.bids,
+    //       bidTrades: this.bidTrades,
+    //     },
+    //   });
+    // } else {
+    //   logger.verbose('Order information has not changed.', {
+    //     main: 'MyCoin',
+    //     sub: 'compareOrders',
+    //   });
+    // }
     return changedOrders;
   }
 
@@ -543,10 +574,10 @@ export default class MyCoin {
         const changedOrders: OrderDetailModel[] =
           this.getChangedOrders(resList);
         // 변화한 주문이 있다면, 거래 진행하기
-        logger.verbose('Detected change. (start proceed)', {
+        logger.verbose('Detected change. (start proceed.)', {
           main: 'MyCoin',
           sub: 'watchTrade',
-          data: { changedOrders },
+          // data: { changedOrders },
         });
         if (changedOrders.length) {
           this.queue.enqueue(() => this.proceed(changedOrders));
@@ -554,7 +585,7 @@ export default class MyCoin {
       } else {
         // 걸려있는 주문이 하나도 없을때
         // this.proceed();
-        logger.verbose('No order exist. (start proceed)', {
+        logger.verbose('No order exist. (start proceed.)', {
           main: 'MyCoin',
           sub: 'watchTrade',
         });
@@ -580,7 +611,7 @@ export default class MyCoin {
       }
       onReady();
 
-      logger.info('Ready to work.', {
+      logger.verbose('Ready to work.', {
         main: 'MyCoin',
         sub: 'checkReady',
         data: {
@@ -612,26 +643,33 @@ export default class MyCoin {
    */
   public async startTrade(marketCurrencyLimit: number): Promise<void> {
     try {
-      // 작업에 할당된 총 금액 설정
-      this.marketCurrencyLimit = marketCurrencyLimit;
-
       // 소켓 연결
       this.connectWebsockets();
 
+      // 작업에 할당된 총 금액 설정
+      this.marketCurrencyLimit = marketCurrencyLimit;
+
       // 수수료율 설정
-      await this.setTradeFee();
+      // await this.setCoinInfoForTrade();
 
       // 작업 준비 체크 interval
       this.readyInterval = setInterval(() => {
-        this.checkReady(() => {
-          // 작업 준비가 되었다면 코인 상태 변경 & 프로세스 시가 설정
+        this.checkReady(async () => {
+          // 작업 준비가 되었다면
+
+          // 코인 상태 변경
           this.status = 'started';
 
+          //프로세스 시가 설정
           const firstObUnit: WSOrderbookUnitModel =
             this.orderbookWS.orderbookUnits[0];
           this.processOpeningPrice = firstObUnit;
 
+          // 거래 단위금액 설정
           this.priceUnit = getPriceUnit(firstObUnit.ap);
+
+          // 수수료율 설정
+          await this.setCoinInfoForTrade();
 
           // 체결 watch interval
           this.watchTradeInterval = setInterval(() => {
