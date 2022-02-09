@@ -171,12 +171,11 @@ export default class MarketWatcher implements MarketWatcherModel {
     this.socket.on('message', this.handleMessage);
 
     this.socket.on('close', () => {
-      console.log('Connection closed.');
+      logger.info('Connection closed.');
     });
   }
 
   getAllCoinSnapshots(coinCodes: string[]) {
-    console.log('coinCodes =====>>> ', coinCodes);
     const params = [
       { ticket: uuid() },
       {

@@ -18,7 +18,7 @@ interface payloadModel {
   query_hash_alg?: string;
 }
 
-export const getToken = function (params?: object): string {
+export const getToken = function (params?: { [key: string]: any }): string {
   const payload: payloadModel = {
     access_key: accessKey,
     nonce: uuid(),
@@ -26,7 +26,12 @@ export const getToken = function (params?: object): string {
 
   // 파라미터가 있는 경우, 쿼리 스트링 해싱
   if (params) {
-    const query = queryString.stringify(params);
+    // const query = queryString.stringify(params);
+
+    const query = Object.keys(params)
+      .map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(params[k]))
+      .join('&');
+    console.log('query ===>', query);
 
     const hash = crypto.createHash(queryHashAlg);
     const queryHash = hash.update(query, 'utf-8').digest('hex');
@@ -38,8 +43,8 @@ export const getToken = function (params?: object): string {
   const jwtToken = jwt.sign(payload, secretKey);
   const authorizationToken = `Bearer ${jwtToken}`;
 
-  logger.verbose('Token generated.', {
-    data: { params: params, payload: payload, token: authorizationToken },
-  });
+  // logger.verbose('Token generated.', {
+  //   data: { params: params, payload: payload, token: authorizationToken },
+  // });
   return authorizationToken;
 };

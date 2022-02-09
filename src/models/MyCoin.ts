@@ -1,4 +1,5 @@
 import logger from '@src/config/winston';
+import { v4 as uuid } from 'uuid';
 
 import OrderbookWS, { WSOrderbookUnitModel } from '@src/websocket/OrderbookWS';
 import Queue from '@src/utils/Queue';
@@ -87,9 +88,8 @@ export default class MyCoin {
   }
 
   /**
-   * TODO: 매수 주문 걸기
    * @param volume 매수 주문량
-   * @param price 매수 주문 가격 (지정가 필수, 시장가 매수시 필수)
+   * @param price 유닛당 매수 주문 가격 (지정가 필수, 시장가 매수시 필수)
    * @returns 성공여부
    */
   private async orderBid(data: {
@@ -101,9 +101,9 @@ export default class MyCoin {
         market: this.mSymbol,
         side: OrderSideLowerType.bid,
         volume: data.volume.toString(),
-        price: data.price.toString(),
-        ord_type: OrderType.limit, // 시장가 주문
-        // identifier,
+        price: data.price,
+        ord_type: 'limit', // 시장가 주문
+        // identifier: uuid(),
       };
 
       logger.info('Order bid requested.', {
@@ -115,7 +115,7 @@ export default class MyCoin {
       const res = await order(params);
       this.bids.push(res);
 
-      logger.info('Order bid successed.', {
+      logger.info('Order bid success.', {
         main: 'MyCoin',
         sub: 'orderBid',
         data: res,
@@ -132,9 +132,8 @@ export default class MyCoin {
   }
 
   /**
-   * TODO: 매도 주문 걸기
    * @param volume 매도 주문량 (지정가 필수, 시장가 매도시 필수)
-   * @param price 매도 주문 가격
+   * @param price 유닛당 매도 주문 가격
    * @returns 성공여부
    */
   private async orderAsk(data: {
@@ -142,16 +141,13 @@ export default class MyCoin {
     price: number;
   }): Promise<boolean> {
     try {
-      // const identifier = uuid();
-      // // this.asks[identifier] = { state: 'pending' };
-
       const params = {
         market: this.mSymbol,
         side: OrderSideLowerType.ask,
-        volume: data.volume.toString(),
-        price: data.price.toString(),
-        ord_type: OrderType.limit, // 시장가 주문
-        // identifier,
+        volume: data.volume.toFixed(1),
+        price: data.price,
+        ord_type: 'limit', // 시장가 주문
+        // identifier: uuid(),
       };
 
       logger.info('Order asks requested.', {
@@ -163,10 +159,10 @@ export default class MyCoin {
       const res = await order(params);
       this.asks.push(res);
 
-      logger.info('Order ask successed.', {
+      logger.info('Order ask success.', {
         main: 'MyCoin',
         sub: 'orderAsk',
-        data: res,
+        data: { request: params, respose: res },
       });
       return true;
     } catch (error) {
@@ -439,17 +435,17 @@ export default class MyCoin {
       // 주문가능 액수 계산 후 주문하기
       const works = [];
       // 매수 가능하면 매수요청 work 추가
-      // if (this.bids.length < 2) {
-      //   const enableBidInfo = this.checkEnableBid();
-      //   if (enableBidInfo) {
-      //     logger.info('Pushed bid work.', {
-      //       main: 'MyCoin',
-      //       sub: 'proceed',
-      //     });
-      //     // works.push(() => this.orderBid(enableBidInfo));
-      //     await this.orderBid(enableBidInfo);
-      //   }
-      // }
+      if (this.bids.length < 2) {
+        const enableBidInfo = this.checkEnableBid();
+        if (enableBidInfo) {
+          logger.info('Pushed bid work.', {
+            main: 'MyCoin',
+            sub: 'proceed',
+          });
+          // works.push(() => this.orderBid(enableBidInfo));
+          await this.orderBid(enableBidInfo);
+        }
+      }
       // 매도 가능하면 매도요청 work 추가
       if (this.asks.length < 2) {
         const enableAskInfo = this.checkEnableAsk();
@@ -530,7 +526,13 @@ export default class MyCoin {
   private async watchTrade() {
     try {
       const allUuids = this.getAllUuids();
+
       if (allUuids.length) {
+        logger.verbose('Orders exist.', {
+          main: 'MyCoin',
+          sub: 'watchTrade',
+          data: { allUuids },
+        });
         // 체결 대기중인 주문이 있을때
         const orderDetailPromises = allUuids.map((uuid) =>
           getOrderDetail({ uuid }),
@@ -547,10 +549,7 @@ export default class MyCoin {
           data: { changedOrders },
         });
         if (changedOrders.length) {
-          // this.proceed(changedOrders);
-          this.queue.enqueue(async () => {
-            await this.proceed(changedOrders);
-          });
+          this.queue.enqueue(() => this.proceed(changedOrders));
         }
       } else {
         // 걸려있는 주문이 하나도 없을때
@@ -559,9 +558,7 @@ export default class MyCoin {
           main: 'MyCoin',
           sub: 'watchTrade',
         });
-        this.queue.enqueue(async () => {
-          await this.proceed();
-        });
+        this.queue.enqueue(() => this.proceed());
       }
     } catch (error) {
       logger.error('watchTrade failed.', {

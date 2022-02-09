@@ -1,4 +1,5 @@
 import { privateAPI } from '@src/config/axios';
+import { fetchPost } from '@src/config/fetchPost';
 import logger from '@src/config/winston';
 
 import {
@@ -100,8 +101,8 @@ export interface OrderRequestModel {
   market: string; // 마켓 ID (필수)
   side: OrderSideLowerType; // 주문 종류 (필수)
   volume: string; // 주문량 (지정가, 시장가 매도 시 필수)
-  price: string; // 주문 가격. (지정가, 시장가 매수 시 필수)
-  ord_type: OrderType; // 주문 타입 (필수)
+  price: number; // 주문 가격. (지정가, 시장가 매수 시 필수)
+  ord_type: string; // 주문 타입 (필수)
   identifier?: string; // 조회용 사용자 지정값 (선택)
 }
 /*************** order END ***************/
@@ -146,13 +147,16 @@ export async function getOrderDetail(
   data: { uuid?: string; identifier?: string } = {},
 ): Promise<OrderDetailModel> {
   try {
+    // if (!data.uuid && !data.identifier) {
+    //   throw new Error('Both uuid and identifier are empty.');
+    // }
     if (!data.uuid && !data.identifier) {
-      throw new Error('Both uuid and identifier are empty.');
+      throw new Error('Uuid is empty.');
     }
 
     const params = {
       uuid: data.uuid,
-      identifier: data.identifier,
+      // identifier: data.identifier,
     };
     const res = await privateAPI.get('/order', {
       params,
@@ -245,11 +249,8 @@ export async function cancelOrder(
  */
 export async function order(data: OrderRequestModel): Promise<OrderModel> {
   try {
-    const res = await privateAPI.post('/orders', {
-      data,
-    });
-
-    return res.data || {};
+    const res = await fetchPost('/orders', data);
+    return res;
   } catch (error) {
     throw error;
   }

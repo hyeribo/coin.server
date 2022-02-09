@@ -34,7 +34,7 @@ export default {
   MAX_TRADABLE_BALANCE: {
     // 코인당 최대 거래 가능한 기준화폐 금액
     // KRW: 150_000,
-    KRW: 10_000,
+    KRW: 5_0000,
     BTC: 0.000_1,
   },
   MAX_PID_AMOUNT_PER_ORDER: 200000, // 최대 주문 가능 금액
